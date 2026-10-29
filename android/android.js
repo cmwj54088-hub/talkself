@@ -1,0 +1,31 @@
+/* Installed only in the APK. No remote resources, server or third-party bridge. */
+(() => {
+  if (!window.ZiyanAndroid) return;
+  const pending = new Map();
+  window.ZiyanFiles = {
+    async save(blob, name) {
+      const token = ZiyanAndroid.beginSave(name, blob.type || 'application/octet-stream');
+      if (!token) throw new Error('已有导出正在进行，或临时空间不足');
+      try {
+        // Keep each native message small even for videos and large JSON backups.
+        for (let offset = 0; offset < blob.size; offset += 192 * 1024) {
+          const bytes = new Uint8Array(await blob.slice(offset, offset + 192 * 1024).arrayBuffer());
+          let binary = '';
+          for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+          if (!ZiyanAndroid.writeSave(token, btoa(binary))) throw new Error('导出临时文件写入失败，请检查可用空间');
+        }
+        return await new Promise((resolve, reject) => {
+          pending.set(token, { resolve, reject });
+          ZiyanAndroid.finishSave(token);
+        });
+      } catch (e) {
+        pending.delete(token); ZiyanAndroid.abortSave(token); throw e;
+      }
+    },
+    receive(token, success, error) {
+      const item = pending.get(token); if (!item) return;
+      pending.delete(token);
+      if (error) item.reject(new Error(error)); else item.resolve(!!success);
+    }
+  };
+})();

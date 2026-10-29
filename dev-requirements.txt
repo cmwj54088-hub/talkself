@@ -1,0 +1,2 @@
+# Development checks only; not part of the offline APK.
+playwright==1.62.0

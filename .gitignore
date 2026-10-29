@@ -1,0 +1,28 @@
+# Build outputs and local development tools
+/android/build/
+/.toolchain/
+/releases/
+/screenshots/
+*.apk
+*.zip
+*.log
+**/__pycache__/
+*.pyc
+/node_modules/
+/自言-*.html
+
+# Signing keys and local configuration
+/android/signing/
+/private/
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.key
+*.pem
+password.txt
+.env
+.env.*
+
+# Test-generated backups
+/tests/*-backup.json
