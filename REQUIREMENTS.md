@@ -1,4 +1,4 @@
-# Confirmed behavior · 0.6.0
+# Confirmed behavior · 0.7.0
 
 1. Each project has one persistent composer draft shared by message and task
    modes. Switching modes never clears or swaps the content. Projects have
@@ -63,3 +63,16 @@
     snippets and record times; selecting a result locates and highlights the
     original, including older chat history. Completed task results open the
     global task page, preserving the incomplete-only project drawer.
+
+17. Android system SEND / SEND_MULTIPLE receives plain text, links, images and
+    videos; content-URI VIEW supports opening these types from other apps. Cold
+    start and a running activity both show an independent preview with editable
+    text, a destination project and explicit save/cancel. Preserve existing
+    composer and editor drafts, including when cancelled or saving fails. Copy
+    granted source URIs into private staging, enforce the existing 200 MB limit
+    per attachment, and commit all records/media atomically to the existing
+    storage and version 3 JSON backup. Pending previews survive reopening;
+    committed batches cannot be replayed after interrupted staging cleanup.
+    Remain offline with no added permissions or runtime dependency. WeChat/QQ
+    require a system share/open entry; their private chat bundles and mini-app
+    cards are unsupported. No accounts or chat database access.

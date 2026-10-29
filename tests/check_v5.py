@@ -1,5 +1,6 @@
 """Regression checks for the confirmed v0.5 interactions and complete backup format."""
 from pathlib import Path
+import os
 import json
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -26,7 +27,7 @@ def context(page,selector):
     expect(page.locator('.context-menu')).to_be_visible()
 
 with sync_playwright() as p:
-    b=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+    b=p.chromium.launch(executable_path=os.environ.get('CHROME_PATH','/usr/bin/chromium'),args=['--no-sandbox'])
     c=b.new_context(viewport={'width':412,'height':892},is_mobile=True,has_touch=True,timezone_id='Asia/Shanghai',accept_downloads=True)
     page=c.new_page();errors=[];outside=[]
     page.on('pageerror',lambda e:errors.append(str(e)))

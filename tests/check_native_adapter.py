@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import json
 import xml.etree.ElementTree as ET
 from playwright.sync_api import sync_playwright,expect
@@ -6,7 +7,7 @@ r=Path(__file__).resolve().parents[1]
 assets=r/'android/build/assets/web'
 version=ET.parse(r/'android/app/src/main/AndroidManifest.xml').getroot().get('{http://schemas.android.com/apk/res/android}versionName')
 with sync_playwright() as p:
- b=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+ b=p.chromium.launch(executable_path=os.environ.get('CHROME_PATH','/usr/bin/chromium'),args=['--no-sandbox'])
  c=b.new_context(viewport={'width':412,'height':892},is_mobile=True,has_touch=True)
  c.add_init_script('''window.testExports=[];window.testClipboard='';window.testCancel=false;window.testFail=false;window.testAborted=0;window.ZiyanAndroid={version:()=> '0.5.0',copyText:t=>{window.testClipboard=t;return true},beginSave:(name,mime)=>{const token=crypto.randomUUID();testExports.push({token,name,mime,chunks:[]});return token},writeSave:(token,data)=>{if(testFail)return false;testExports.find(e=>e.token===token).chunks.push(data);return true},finishSave:token=>queueMicrotask(()=>window.ZiyanFiles.receive(token,!testCancel,'')),abortSave:()=>{testAborted++}}'''.replace('0.5.0',version))
  page=c.new_page();errors=[];outside=[]

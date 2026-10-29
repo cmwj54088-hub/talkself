@@ -1,5 +1,6 @@
 """Deadline boundaries, legacy drafts, untrusted imports and ink regression."""
 from pathlib import Path
+import os
 from datetime import datetime,timedelta
 from zoneinfo import ZoneInfo
 import time,json
@@ -15,7 +16,7 @@ def nav(page,tab):
  if page.locator('#app.in-chat').count():page.locator('[data-action="back"]').click()
  page.locator('.mobile-nav:visible [data-page="'+tab+'"]').click()
 with sync_playwright() as p:
- b=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+ b=p.chromium.launch(executable_path=os.environ.get('CHROME_PATH','/usr/bin/chromium'),args=['--no-sandbox'])
  c=b.new_context(viewport={'width':412,'height':892},is_mobile=True,has_touch=True,timezone_id='Asia/Shanghai',accept_downloads=True)
  page=c.new_page();errors=[];remote=[]
  page.on('pageerror',lambda e:errors.append(str(e)))

@@ -110,7 +110,7 @@ function bubble(m){let content;if(['image','video','handwriting'].includes(m.typ
 function chat(){const p=project();if(!p)return '<div class="empty">新建一个项目，开始记录。<br><button class="primary" data-action="create">新建项目</button></div>';const all=projectMessages(),limit=limits.get(activeId)||60;let prev;const content=all.slice(-limit).map(m=>{const newDay=!prev||dayTime(prev.created)!==dayTime(m.created);const sep=!prev||newDay||m.created-prev.created>300000?`<div class="date-separator" data-timestamp="${m.created}">${newDay?dayTime(m.created)+' ':''}${clockTime(m.created)}</div>`:'';prev=m;return sep+bubble(m);}).join('');const text=draft().text;return `${header(p)}${taskbar()}<section class="messages" id="messages" aria-label="项目笔记">${all.length>limit?'<button class="load-older" data-action="older">加载更早的记录</button>':''}${content||'<div class="empty chat-empty">把想法，留在这里。<br><span>右滑回首页 · 左滑写手写笔记</span></div>'}</section><div class="compose-wrap"><form class="composer ${taskMode?'task-composer':''}" id="compose">${taskMode?'<div class="task-input-label">一次添加多项 · 回车新建下一项</div>':''}<textarea id="message-input" placeholder="${taskMode?'输入待办，回车继续下一项…':'写点什么，发给自己…'}" aria-label="${taskMode?'待办内容':'笔记内容'}" maxlength="50000" rows="2">${esc(text)}</textarea>${taskMode?'<div class="task-compose-options"><div id="task-input-preview">'+taskInputPreview(text)+'</div><button type="button" class="text-link" data-action="task-details">图片 / 截止日期</button></div>':''}<div class="composer-row"><div class="composer-tools"><button type="button" class="tool ${taskMode?'on':''}" data-action="task-mode" aria-pressed="${taskMode}">${icon('tasks')}<span>${taskMode?'待办模式':'待办'}</span></button><span class="input-hint">${taskMode?'保存到顶部，不发消息':'草稿自动保存'}</span></div><div class="send-tools"><button type="button" class="icon-btn attach-toggle" data-action="attachments" aria-label="添加附件">${icon('plus')}</button><button type="submit" class="send" id="send-button" ${text.trim()?'':'hidden'}>${taskMode?'保存待办':'发送'}</button></div></div></form>${attachmentOpen?`<div class="attachment-panel"><button data-pick="album">${icon('image')}<span>相册</span></button><button data-pick="camera">${icon('camera')}<span>拍照</span></button><button data-pick="video">${icon('video')}<span>视频</span></button><button data-action="handwrite">${icon('art')}<span>手写</span></button><button data-action="rich-note">${icon('note')}<span>图文笔记</span></button><button data-action="templates">${icon('note')}<span>模板</span></button></div>`:''}<div class="composer-note">${icon('lock')} 本地保存 · 长按消息可编辑或整理</div></div>`;}
 function taskInputPreview(text){const lines=text.split('\n').map(s=>s.trim()).filter(Boolean);return lines.length?`<span class="task-entry-count">将保存 ${lines.length} 项</span>`:'';}
 function tasksPage(){let filtered=tasks.filter(t=>taskFilter==='all'||(taskFilter==='done'?t.done:!t.done));if(!orderSnapshot)orderSnapshot=[...filtered].sort(taskCompare).map(t=>t.id);const order=new Map(orderSnapshot.map((id,i)=>[id,i]));filtered.sort((a,b)=>(order.get(a.id)??1e9)-(order.get(b.id)??1e9)||taskCompare(a,b));return `<section class="page"><h2>待办事项</h2><p class="lead">截止三天内及逾期事项标红，按紧急程度排序。</p><div class="task-summary"><strong>${tasks.filter(t=>!t.done).length}</strong><span>项未完成</span>${icon('tasks')}</div><div class="filters">${[['open','未完成'],['done','已完成'],['all','全部']].map(([v,t])=>`<button data-filter="${v}" class="${taskFilter===v?'active':''}">${t}</button>`).join('')}</div>${filtered.map(t=>taskRow(t,false)).join('')||'<div class="empty">这里还没有待办。</div>'}</section>`;}
-function settingsPage(){const native=!!window.ZiyanAndroid;return `<section class="page settings-page"><h2>我的空间</h2><p class="lead">不用登录，内容只保存在本机。</p><div class="setting-card identity-card"><img src="icon.svg" width="57" height="57" alt=""><div><h3>自言 <span class="count">${native?'APK '+esc(window.ZiyanAndroid.version()):'v0.6'}</span></h3><p>${projects.length} 个项目 · ${messages.length} 条笔记 · ${tasks.length} 项待办</p></div></div><div class="setting-card"><h3>完整备份与恢复</h3><p>包含全部项目、笔记、图片、视频、待办、手写原始笔迹、模板和草稿。可在另一浏览器或 APK 中导入，继续查看和编辑。</p><div class="settings-actions"><button class="primary" data-action="export">${icon('download')} 导出完整备份</button><button class="secondary" data-action="import">${icon('upload')} 导入备份</button></div><p class="fine-print">${native?'导出时选择系统文件保存位置。旧网页版 JSON 备份可以直接导入。':'HTML 是应用，JSON 备份是你的内容，请一起保留。'}导入会在确认后替换当前数据。</p></div><div class="setting-card"><h3>笔记模板</h3><p>题目与解答、公式推导、错题记录、实验记录，支持修改与自建。</p><button class="secondary" data-action="templates">管理模板</button></div><div class="setting-card"><h3>${native?'应用存储':'设备存储'}</h3><p id="storage-info">正在读取…</p>${native?'':'<button class="secondary" data-action="persist">申请保留本地数据</button>'}<p>${native?'内容保存在应用独立空间，清理浏览器不会影响这里的记录。卸载或清除本应用数据会删除记录，请定期导出备份。':'清理浏览器数据或卸载可能删除记录，请定期导出备份。'}</p></div><div class="setting-card"><h3>${native?'完全离线':'安卓使用'}</h3><p>${native?'界面内置在 APK 中，无需网络或本地服务器。不申请联网权限、不加载远程网页、不包含广告或统计服务。相册、拍照和文件保存通过系统界面操作。':'单文件 HTML 可离线打开；完整 PWA 通过 localhost 或 HTTPS 首次加载后，可添加到桌面。不同浏览器、不同地址的数据独立，迁移请使用备份。'}</p>${native?'':'<button class="secondary" data-action="install">安装说明</button>'}</div></section>`;}
+function settingsPage(){const native=!!window.ZiyanAndroid;return `<section class="page settings-page"><h2>我的空间</h2><p class="lead">不用登录，内容只保存在本机。</p><div class="setting-card identity-card"><img src="icon.svg" width="57" height="57" alt=""><div><h3>自言 <span class="count">${native?'APK '+esc(window.ZiyanAndroid.version()):'v0.7'}</span></h3><p>${projects.length} 个项目 · ${messages.length} 条笔记 · ${tasks.length} 项待办</p></div></div><div class="setting-card"><h3>完整备份与恢复</h3><p>包含全部项目、笔记、图片、视频、待办、手写原始笔迹、模板和草稿。可在另一浏览器或 APK 中导入，继续查看和编辑。</p><div class="settings-actions"><button class="primary" data-action="export">${icon('download')} 导出完整备份</button><button class="secondary" data-action="import">${icon('upload')} 导入备份</button></div><p class="fine-print">${native?'导出时选择系统文件保存位置。旧网页版 JSON 备份可以直接导入。':'HTML 是应用，JSON 备份是你的内容，请一起保留。'}导入会在确认后替换当前数据。</p></div><div class="setting-card"><h3>笔记模板</h3><p>题目与解答、公式推导、错题记录、实验记录，支持修改与自建。</p><button class="secondary" data-action="templates">管理模板</button></div><div class="setting-card"><h3>${native?'应用存储':'设备存储'}</h3><p id="storage-info">正在读取…</p>${native?'':'<button class="secondary" data-action="persist">申请保留本地数据</button>'}<p>${native?'内容保存在应用独立空间，清理浏览器不会影响这里的记录。卸载或清除本应用数据会删除记录，请定期导出备份。':'清理浏览器数据或卸载可能删除记录，请定期导出备份。'}</p></div><div class="setting-card"><h3>${native?'完全离线':'安卓使用'}</h3><p>${native?'界面内置在 APK 中，无需网络或本地服务器。不申请联网权限、不加载远程网页、不包含广告或统计服务。相册、拍照和文件保存通过系统界面操作。':'单文件 HTML 可离线打开；完整 PWA 通过 localhost 或 HTTPS 首次加载后，可添加到桌面。不同浏览器、不同地址的数据独立，迁移请使用备份。'}</p>${native?'':'<button class="secondary" data-action="install">安装说明</button>'}</div></section>`;}
 function render(bottom=false){rememberDraft();renderVersion++;const route=`${page}/${inChat}/${activeId}`;const same=app.dataset.route===route;const oldPage=same?$('.page')?.scrollTop:0,oldMessages=same?$('#messages')?.scrollTop:undefined,oldTasks=same?$('.taskbar-list')?.scrollTop:0;app.className=page!=='projects'?'other-page':inChat?'in-chat':'';app.dataset.route=route;app.innerHTML=`${nav()}${sidebar()}<main class="main">${page==='projects'?chat():page==='tasks'?tasksPage():settingsPage()}</main>${page==='projects'&&inChat?'':nav(true)}`;if($('.page'))$('.page').scrollTop=oldPage||0;if($('.taskbar-list'))$('.taskbar-list').scrollTop=oldTasks||0;if(page==='projects'){const list=$('#messages');if(list){list.style.scrollBehavior='auto';list.scrollTop=bottom?list.scrollHeight:oldMessages??list.scrollHeight;list.dataset.pin=bottom?'1':'0';list.dataset.auto=bottom?'1':'0';for(const event of ['pointerdown','wheel','touchstart'])list.addEventListener(event,()=>{list.dataset.auto='0';},{passive:true});list.addEventListener('scroll',()=>{if(list.dataset.auto==='1')return;list.dataset.pin=list.scrollHeight-list.scrollTop-list.clientHeight<50?'1':'0';},{passive:true});}loadMedia(renderVersion).catch(failure);}else loadMedia(renderVersion).catch(failure);if(page==='settings')storageInfo().catch(failure);}
 async function loadMedia(version){await Promise.all([...document.querySelectorAll('#app [data-media]')].map(async el=>{const mid=el.dataset.media;if(!mediaUrls.has(mid)){const record=await request('media','get',mid);if(!record){el.replaceWith(document.createTextNode('附件无法读取'));return;}mediaUrls.set(mid,URL.createObjectURL(record.blob));}if(version!==renderVersion)return;el.addEventListener('load',()=>{const list=$('#messages');if(list?.dataset.pin==='1')list.scrollTop=list.scrollHeight;},{once:true});el.src=mediaUrls.get(mid);}));}
 function openProject(pid,mid){rememberDraft();$('#message-input')?.remove();activeId=pid;page='projects';inChat=true;taskMode=!!draft().taskMode;attachmentOpen=false;if(mid){const all=projectMessages(),at=all.findIndex(m=>m.id===mid);if(at>=0)limits.set(pid,Math.max(limits.get(pid)||60,all.length-at+5));}render(!mid);if(mid){const el=$(`[data-message="${mid}"]`);el?.scrollIntoView({block:'center'});el?.classList.add('highlight');}}
@@ -252,8 +252,110 @@ document.addEventListener('pointercancel',()=>{clearTimeout(longPressTimer);swip
 dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDialog();}});
 $('#media-input').addEventListener('change',e=>addMedia(e.target.files,mediaProject||activeId).catch(failure));$('#backup-input').addEventListener('change',e=>readBackup(e.target.files[0]).catch(failure));
 window.addEventListener('pagehide',()=>{rememberDraft();inkEditor.flush().catch(failure);noteEditor.flush().catch(failure);});document.addEventListener('visibilitychange',()=>{if(document.hidden){rememberDraft();inkEditor.flush().catch(failure);noteEditor.flush().catch(failure);}});
-window.ziyanPersistNow=()=>{rememberDraft();inkEditor.flush().catch(failure);noteEditor.flush().catch(failure);};window.ziyanGoBack=()=>{if(menuRoot){closeMenu();return true;}if(selecting){closeSelection();return true;}if(dialog.open){closeDialog();return true;}if(document.querySelector('.note-editor')){noteEditor.back().catch(failure);return true;}const back=$('.ink-editor [data-ink-action="back"]');if(back){back.click();return true;}if(page!=='projects'){navigatePage('projects');return true;}if(inChat){inChat=false;render();return true;}rememberDraft();return false;};
+window.ziyanPersistNow=()=>{rememberDraft();inkEditor.flush().catch(failure);noteEditor.flush().catch(failure);};window.ziyanGoBack=()=>{if(sharePreview){sharePreview.cancel();return true;}if(menuRoot){closeMenu();return true;}if(selecting){closeSelection();return true;}if(dialog.open){closeDialog();return true;}if(document.querySelector('.note-editor')){noteEditor.back().catch(failure);return true;}const back=$('.ink-editor [data-ink-action="back"]');if(back){back.click();return true;}if(page!=='projects'){navigatePage('projects');return true;}if(inChat){inChat=false;render();return true;}rememberDraft();return false;};
+
+// Sharing has its own modal and transaction; it never repurposes a composer/editor draft.
+let sharePreview=null, checkingShares=false, sharesChanged=false;
+function startShareReceiver(){
+ if(!window.ZiyanShares)return;
+ window.ZiyanShares.onAvailable=()=>checkShares().catch(failure);
+ window.ZiyanShares.available();
+}
+async function checkShares(){
+ if(sharePreview)return;
+ if(checkingShares){sharesChanged=true;return;}
+ checkingShares=true;
+ try{
+  do{
+   sharesChanged=false;
+   for(const incoming of window.ZiyanShares.list()){
+    // This marker commits with the records; a crash before native cleanup cannot duplicate them.
+    if(await request('meta','get','share-'+incoming.token)){window.ZiyanShares.discard(incoming.token);continue;}
+    openSharePreview(incoming);return;
+   }
+  }while(sharesChanged);
+ }finally{checkingShares=false;}
+}
+function openSharePreview(incoming){
+ window.ziyanPersistNow();closeMenu();clearTimeout(longPressTimer);swipeStart=null;
+ if(!navigating)clearSwipe();
+ const root=document.createElement('dialog');root.className='share-preview';
+ const state={root,cancelled:false,saving:false,files:null,urls:[],cancel(){
+  if(state.saving)return;
+  state.cancelled=true;window.ZiyanShares.discard(incoming.token);finish();
+ }};
+ sharePreview=state;
+ root.innerHTML=`<form><h3>接收分享</h3><p class="dialog-copy">确认后保存到所选项目。单个附件上限 200MB。</p><label>目标项目<select id="share-project" required>${sortedProjects().map(p=>`<option value="${esc(p.id)}" ${p.id===activeId?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label><label>文字 / 链接<textarea id="share-text" maxlength="50000" class="edit-text" aria-label="分享文字">${esc(incoming.text||'')}</textarea></label><div id="share-files"></div><p id="share-status" class="dialog-copy" role="status"></p><div class="dialog-actions"><button type="button" class="secondary" id="share-cancel">取消</button><button type="button" class="secondary" id="share-retry" hidden>重试读取</button><button type="submit" class="primary" id="share-save" disabled>确认保存</button></div></form>`;
+ document.body.append(root);root.showModal();
+ // No app-wide click/gesture handler should process controls inside this modal.
+ root.addEventListener('click',e=>e.stopPropagation());
+ root.addEventListener('keydown',e=>e.stopPropagation());
+ root.addEventListener('cancel',e=>{e.preventDefault();state.cancel();});
+ $('#share-cancel',root).onclick=state.cancel;
+ function status(text){$('#share-status',root).textContent=text;}
+ function finish(){
+  root.close();root.remove();state.urls.forEach(url=>URL.revokeObjectURL(url));
+  if(sharePreview===state)sharePreview=null;
+  checkShares().catch(failure);
+ }
+ async function load(){
+  $('#share-retry',root).hidden=true;$('#share-save',root).disabled=true;
+  state.urls.forEach(url=>URL.revokeObjectURL(url));state.urls=[];$('#share-files',root).replaceChildren();
+  try{
+   if(typeof incoming.text!=='string'||incoming.text.length>50000||!Array.isArray(incoming.files))throw new Error('分享内容格式不支持');
+   const files=[];
+   for(let i=0;i<incoming.files.length;i++){
+    status(`正在读取附件 ${i+1} / ${incoming.files.length}…`);
+    const file=await window.ZiyanShares.file(incoming.token,i,incoming.files[i],()=>state.cancelled);
+    if(state.cancelled)return;
+    files.push(file);
+    const item=document.createElement('figure'),url=URL.createObjectURL(file);state.urls.push(url);
+    const media=document.createElement(file.type.startsWith('image/')?'img':'video');media.src=url;
+    if(media.tagName==='VIDEO'){media.controls=true;media.preload='metadata';media.playsInline=true;}
+    else media.alt=file.name;
+    const caption=document.createElement('figcaption');caption.textContent=file.name+' · '+(file.size/1024/1024).toFixed(2)+' MB';
+    item.append(media,caption);$('#share-files',root).append(item);
+   }
+   if(state.cancelled)return;
+   state.files=files;status(projects.length?(files.length?`共 ${files.length} 个附件，等待确认保存`:'请核对文字并确认保存'):'请先取消分享并新建项目，再重新分享');
+   $('#share-save',root).disabled=!projects.length;
+  }catch(e){if(!state.cancelled){state.files=null;status(e.message||'分享读取失败');$('#share-retry',root).hidden=false;}}
+ }
+ $('#share-retry',root).onclick=load;
+ $('form',root).onsubmit=async e=>{
+  e.preventDefault();e.stopPropagation();
+  if(state.saving||!state.files)return;
+  const text=$('#share-text',root).value.trim(),pid=$('#share-project',root).value;
+  if(!text&&!state.files.length){status('请输入文字或取消分享');return;}
+  if(text.length>50000){status('分享文字超过 5 万字');return;}
+  if(busy){status('应用正在保存，请稍后再次确认');return;}
+  state.saving=true;busy=true;$('#share-save',root).disabled=true;$('#share-cancel',root).disabled=true;
+  $('#share-text',root).disabled=true;$('#share-project',root).disabled=true;
+  let committed=false;
+  try{
+   const target=await request('projects','get',pid);if(!target)throw new Error('目标项目已不存在，请取消后重新分享');
+   const now=Date.now(),records=[],media=[];
+   if(text)records.push({id:id(),projectId:pid,type:'text',text,created:now});
+   state.files.forEach(file=>{const mid=id();records.push({id:mid,projectId:pid,type:file.type.startsWith('image/')?'image':'video',name:file.name,created:now+records.length});media.push({id:mid,blob:file});});
+   await transaction(['messages','media','projects','meta'],tx=>{
+    records.forEach(m=>tx.objectStore('messages').put(m));media.forEach(m=>tx.objectStore('media').put(m));
+    tx.objectStore('projects').put({...target,updated:now+records.length});
+    tx.objectStore('meta').put({id:'share-'+incoming.token,value:true});
+   });
+   committed=true;window.ZiyanShares.discard(incoming.token);
+   await refresh();render();toast(`已保存到「${target.name}」`);
+  }catch(error){
+   if(!committed){status(error?.name==='QuotaExceededError'?'设备空间不足，未保存任何分享记录；清理空间后可重试':error.message||'保存失败，可重试');return;}
+   failure(error);
+  }finally{
+   state.saving=false;busy=false;
+   if(!committed){$('#share-save',root).disabled=false;$('#share-cancel',root).disabled=false;$('#share-text',root).disabled=false;$('#share-project',root).disabled=false;}
+  }
+  finish();
+ };
+ load();
+}
 
 async function migrateTasks(){const old=await request('messages','getAll');const legacy=old.filter(m=>m.type==='task');if(!legacy.length)return;const ps=await request('projects','getAll');await transaction(['tasks','messages','projects'],tx=>{legacy.forEach(m=>{tx.objectStore('tasks').put({id:m.id,projectId:m.projectId,text:m.text,done:!!m.done,created:m.created});tx.objectStore('messages').delete(m.id);});ps.filter(p=>legacy.some(t=>t.projectId===p.id)).forEach(p=>tx.objectStore('projects').put({...p,tasksOpen:true}));});}
-async function start(){if(!globalThis.indexedDB||!globalThis.crypto?.randomUUID)throw new Error('请使用支持本地存储的 Chrome 打开应用');db=await new Promise((resolve,reject)=>{const r=indexedDB.open('ziyan-local-v1',2);r.onupgradeneeded=()=>{for(const name of [...STORES,'meta'])if(!r.result.objectStoreNames.contains(name))r.result.createObjectStore(name,{keyPath:'id'});};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.onblocked=()=>toast('请关闭其他自言页面后重新打开');});db.onversionchange=()=>{db.close();toast('数据版本已更新，请刷新');};await migrateTasks();await refresh();const stored=await request('drafts','getAll');stored.forEach(d=>drafts.set(d.id,d));const initialized=await request('meta','get','initialized');if(!initialized){const now=Date.now();if(!projects.length)await request('projects','put',{id:id(),name:'随手记',emoji:'🌱',color:0,pinned:false,created:now,updated:now,tasksOpen:false});await request('meta','put',{id:'initialized',value:true});}if(!await request('meta','get','templates-initialized')){if(!templates.length)await transaction(['templates'],tx=>DEFAULT_TEMPLATES.forEach(t=>tx.objectStore('templates').put(t)));await request('meta','put',{id:'templates-initialized',value:true});}await refresh();taskMode=!!draft().taskMode;render(true);if(!window.ZiyanAndroid && 'serviceWorker' in navigator && window.isSecureContext && ['http:','https:'].includes(location.protocol))navigator.serviceWorker.register('./sw.js').catch(()=>toast('离线缓存未启用，请刷新重试'));}
+async function start(){if(!globalThis.indexedDB||!globalThis.crypto?.randomUUID)throw new Error('请使用支持本地存储的 Chrome 打开应用');db=await new Promise((resolve,reject)=>{const r=indexedDB.open('ziyan-local-v1',2);r.onupgradeneeded=()=>{for(const name of [...STORES,'meta'])if(!r.result.objectStoreNames.contains(name))r.result.createObjectStore(name,{keyPath:'id'});};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.onblocked=()=>toast('请关闭其他自言页面后重新打开');});db.onversionchange=()=>{db.close();toast('数据版本已更新，请刷新');};await migrateTasks();await refresh();const stored=await request('drafts','getAll');stored.forEach(d=>drafts.set(d.id,d));const initialized=await request('meta','get','initialized');if(!initialized){const now=Date.now();if(!projects.length)await request('projects','put',{id:id(),name:'随手记',emoji:'🌱',color:0,pinned:false,created:now,updated:now,tasksOpen:false});await request('meta','put',{id:'initialized',value:true});}if(!await request('meta','get','templates-initialized')){if(!templates.length)await transaction(['templates'],tx=>DEFAULT_TEMPLATES.forEach(t=>tx.objectStore('templates').put(t)));await request('meta','put',{id:'templates-initialized',value:true});}await refresh();taskMode=!!draft().taskMode;render(true);startShareReceiver();if(!window.ZiyanAndroid && 'serviceWorker' in navigator && window.isSecureContext && ['http:','https:'].includes(location.protocol))navigator.serviceWorker.register('./sw.js').catch(()=>toast('离线缓存未启用，请刷新重试'));}
 start().catch(e=>{app.innerHTML=`<div class="empty"><h2>暂时无法打开</h2><p>${esc(e.message)}</p></div>`;console.error(e);});

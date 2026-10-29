@@ -33,7 +33,7 @@ for name in ['README.md','REQUIREMENTS.md','AGENTS.md','.gitignore','dev-require
              'build_preview.py','package_release.py','android/README.md','android/build.py',
              'android/setup_toolchain.py','android/toolchain-lock.json','android/android.js','android/.gitignore']:
     entries['source/' + name] = (ROOT / name).read_bytes()
-for name in ['v5-fullscreen-editor.png','v5-deadline-tasks.png','enhanced-search.png','forward-note.png','home-swipe-fixed-nav.png']:
+for name in ['v5-fullscreen-editor.png','v5-deadline-tasks.png','enhanced-search.png','forward-note.png','home-swipe-fixed-nav.png','share-preview.png']:
     path = ROOT / 'screenshots' / name
     if path.exists():
         entries['verification/' + name] = path.read_bytes()

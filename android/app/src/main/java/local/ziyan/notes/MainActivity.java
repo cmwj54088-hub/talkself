@@ -55,6 +55,7 @@ public final class MainActivity extends Activity {
     private static final Set<String> ASSETS = new HashSet<>(Arrays.asList(
         "index.html"));
     private WebView web;
+    private ShareInbox shareInbox;
     private ValueCallback<Uri[]> fileCallback;
     private Uri cameraUri;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
@@ -99,6 +100,10 @@ public final class MainActivity extends Activity {
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         WebView.setWebContentsDebuggingEnabled(false);
         web.addJavascriptInterface(nativeFiles, "ZiyanAndroid");
+        shareInbox = new ShareInbox(this, io, () -> runOnUiThread(() -> {
+            if (web != null && !isDestroyed()) web.evaluateJavascript("window.ZiyanShares && window.ZiyanShares.available()", null);
+        }));
+        web.addJavascriptInterface(shareInbox, "ZiyanShareInbox");
         web.setWebViewClient(new LocalAssets());
         web.setWebChromeClient(new WebChromeClient() {
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
@@ -148,6 +153,12 @@ public final class MainActivity extends Activity {
             // Explicit HTTPS base gives IndexedDB a stable app origin, without making a URL request.
             web.loadDataWithBaseURL(ORIGIN, bytes.toString("UTF-8"), "text/html", "UTF-8", null);
         } catch (IOException error) { showToast("内置界面读取失败，请重新安装"); }
+        if (state == null) shareInbox.accept(getIntent());
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent); setIntent(intent);
+        if (shareInbox != null) shareInbox.accept(intent);
     }
 
     private void cleanTemporaryFiles(File directory) {

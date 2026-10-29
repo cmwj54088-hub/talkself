@@ -28,4 +28,25 @@
       if (error) item.reject(new Error(error)); else item.resolve(!!success);
     }
   };
+  if (window.ZiyanShareInbox) window.ZiyanShares = {
+    onAvailable: null,
+    available() { this.onAvailable?.(); },
+    list() { return JSON.parse(ZiyanShareInbox.pending()).sort((a,b)=>a.created-b.created||a.token.localeCompare(b.token)); },
+    discard(token) { ZiyanShareInbox.discard(token); },
+    async file(token, index, item, cancelled) {
+      if (!/^(image|video)\/[a-zA-Z0-9.+-]+$/.test(item.mime) ||
+          !Number.isSafeInteger(item.size) || item.size <= 0 || item.size > 200*1024*1024)
+        throw new Error('分享附件格式不支持或超过 200MB');
+      const chunks=[];
+      for (let offset=0;offset<item.size;) {
+        if (cancelled()) throw new Error('分享已取消');
+        const raw=atob(ZiyanShareInbox.read(token,index,offset));
+        if (!raw.length || raw.length!==Math.min(192*1024,item.size-offset)) throw new Error('分享附件读取失败，请重试');
+        chunks.push(Uint8Array.from(raw,c=>c.charCodeAt(0))); offset+=raw.length;
+        // Yield for progress and cancellation, including large videos.
+        await new Promise(resolve=>setTimeout(resolve,0));
+      }
+      return new File(chunks,item.name,{type:item.mime});
+    }
+  };
 })();
