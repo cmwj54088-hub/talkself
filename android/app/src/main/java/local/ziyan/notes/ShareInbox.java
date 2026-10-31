@@ -73,6 +73,7 @@ public final class ShareInbox {
             }
             if (text.length() > 50000) throw new IOException("分享文字超过 5 万字，请缩短后重试");
             JSONArray files = new JSONArray();
+            boolean wechat = false;
             for (Uri uri : uris) {
                 if (uri == null || !"content".equals(uri.getScheme())) throw new IOException("只支持系统授权的本地附件");
                 String name = "", mime = activity.getContentResolver().getType(uri);
@@ -85,19 +86,21 @@ public final class ShareInbox {
                         if (si >= 0 && !c.isNull(si)) declared = c.getLong(si);
                     }
                 } catch (Exception ignored) { /* Providers may omit optional metadata. */ }
+                if (name == null) name = "";
                 if (declared > MAX_FILE) throw new IOException("单个附件上限 200MB");
                 if (mime == null || mime.equals("application/octet-stream") || mime.endsWith("/*")) {
                     int dot = name.lastIndexOf('.');
                     mime = dot < 0 ? null : MimeTypeMap.getSingleton().getMimeTypeFromExtension(name.substring(dot + 1).toLowerCase(Locale.ROOT));
                     if (mime == null) mime = intent.getType();
                 }
+                boolean archive = "application/zip".equals(mime) || "application/x-zip-compressed".equals(mime);
                 boolean plain = "text/plain".equals(mime);
-                if (!plain && (mime == null || !mime.matches("(?:image|video)/[a-zA-Z0-9.+-]+")))
-                    throw new IOException("此分享格式不支持，请选择文字、图片或视频");
+                if (!plain && !archive && (mime == null || !mime.matches("(?:image|video)/[a-zA-Z0-9.+-]+")))
+                    throw new IOException("此分享格式不支持，请选择文字、图片、视频或微信聊天 ZIP");
                 if (name == null || name.isEmpty()) name = plain ? "分享文字.txt" : "分享附件";
                 name = name.replaceAll("[\\x00-\\x1f/\\\\]", "_");
                 if (name.length() > 180) name = name.substring(0, 180);
-                File target = new File(dir, files.length() + ".bin");
+                File target = new File(dir, archive ? "chat.zip" : files.length() + ".bin");
                 long total = 0;
                 try (InputStream input = activity.getContentResolver().openInputStream(uri);
                      OutputStream output = new FileOutputStream(target)) {
@@ -111,7 +114,14 @@ public final class ShareInbox {
                     }
                 }
                 if (total == 0) throw new IOException("分享附件为空，请重新选择");
-                if (plain) {
+                if (archive) {
+                    if (uris.size() != 1) throw new IOException("请每次分享一个聊天 ZIP，其他附件请单独分享");
+                    WechatArchive.Result chat = WechatArchive.unpack(target, dir, files.length());
+                    text = text.isEmpty() ? chat.text : text + "\n\n" + chat.text;
+                    if (text.length() > 50000) throw new IOException("聊天正文超过 5 万字");
+                    for (WechatArchive.Part part : chat.parts) files.put(new JSONObject().put("name", part.name).put("mime", part.mime).put("size", part.size));
+                    wechat = true; target.delete();
+                } else if (plain) {
                     byte[] bytes = new byte[(int)total];
                     try (DataInputStream input = new DataInputStream(new FileInputStream(target))) { input.readFully(bytes); }
                     String value = StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(bytes)).toString();
@@ -122,7 +132,7 @@ public final class ShareInbox {
             }
             if (text.trim().isEmpty() && files.length() == 0) throw new IOException("没有可接收的文字、图片或视频");
             JSONObject metadata = new JSONObject().put("token", dir.getName()).put("text", text)
-                .put("files", files).put("created", System.currentTimeMillis());
+                .put("files", files).put("wechat", wechat).put("created", System.currentTimeMillis());
             try (FileOutputStream output = new FileOutputStream(new File(dir, "ready.tmp"))) {
                 output.write(metadata.toString().getBytes(StandardCharsets.UTF_8)); output.getFD().sync();
             }

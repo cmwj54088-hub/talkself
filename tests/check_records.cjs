@@ -76,8 +76,9 @@ async function clearSearch(page) {
     for(const mid of ['old-note','rich','photo','movie','writing']) {
       await forward(mid);
       await expect(page.locator('[data-forward-project="source"]')).toHaveCount(0);
-      await expect(page.locator('[data-forward-project="target"]')).toBeVisible();
-      await page.locator('[data-forward-project="target"]').click();
+      await expect(page.locator('.forward-targets [data-forward-project="target"]')).toBeVisible();
+      await page.locator('.forward-targets [data-forward-project="target"]').click();
+      await page.locator('#forward-confirm').click();
       await expect(page.locator('#dialog')).not.toBeVisible();
       await expect(page.locator('#toast')).toContainText('已转发到');
     }

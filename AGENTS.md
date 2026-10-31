@@ -7,8 +7,9 @@ Do not edit generated APK assets or a bundled standalone HTML as the source.
 
 Preserve all requirements in REQUIREMENTS.md. There is no light mode, recording,
 AI service, telemetry, remote font, CDN, cloud sync or account integration.
-The Android manifest intentionally requests no permissions, including INTERNET.
-Do not add a network permission or external runtime dependency.
+The Android manifest only requests SET_ALARM for opening the system clock.
+It intentionally has no INTERNET permission. Do not add a network permission or
+external runtime dependency. Saving a reminder time does not enable a system alarm.
 
 Use the existing app ID local.ziyan.notes and signing certificate for updates.
 Restore android/signing from the delivery ZIP's private/upgrade-signing.zip if

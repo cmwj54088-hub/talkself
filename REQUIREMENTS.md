@@ -1,4 +1,4 @@
-# Confirmed behavior · 0.7.0
+# Confirmed behavior · 0.9.1
 
 1. Each project has one persistent composer draft shared by message and task
    modes. Switching modes never clears or swaps the content. Projects have
@@ -74,5 +74,42 @@
     storage and version 3 JSON backup. Pending previews survive reopening;
     committed batches cannot be replayed after interrupted staging cleanup.
     Remain offline with no added permissions or runtime dependency. WeChat/QQ
-    require a system share/open entry; their private chat bundles and mini-app
-    cards are unsupported. No accounts or chat database access.
+    require a system share/open entry. WeChat plain chat ZIP exports are supported
+    as described below; mini-app/private formats remain unsupported. No accounts
+    or chat database access.
+
+18. Remove the diagnostic activity, UI and bridge. Receive one WeChat chat ZIP
+    per share (Chat history.txt plus supported image/video files), preview with
+    editable text, and save only on confirmation. Preserve the exported sender,
+    original timestamps and order in the note body; creation time is import time.
+    Keep inline images in the text note and video attachments as video records.
+    Commit everything atomically into existing stores and v3 backups. Reject
+    missing references, encrypted/corrupt ZIPs, unknown attachments and unsafe
+    paths; enforce 200 MB per ZIP/file, 512 MB unpacked total, 256 entries and
+    50,000 text characters. Do not infer missing sender/time from unmerged text.
+
+19. Drawer animation, keyboard/viewport resize and late media preserve a bottom
+    reader at the bottom and a historical reader at their visible message/line.
+    Opening the drawer clips the chat from above without pushing visible text
+    down; preserve its screen position throughout both drawer animations.
+    Displayed messages and context menus suppress native selection; the explicit
+    partial-selection view, inputs and editors retain normal selection. Real
+    touch double-tap and desktop double-click open text/rich note editing without
+    changing the original ID/time or interfering with media, long press or swipes.
+20. Forwarding uses a full-screen searchable project picker, recent destinations
+    and multiple selection. One confirmation creates independent copies of one
+    note in every selected project, with one atomic transaction for all targets.
+    Cancel/failure leave no partial copy; submissions cannot overlap.
+21. Composer actions stay visible above the keyboard and are disabled when empty.
+    Manual mode switches keep one draft per project; saving tasks returns to note
+    mode only after a successful atomic task/draft commit. Full-page note and
+    template editors use consistent dark headers, readable bodies and reachable
+    completion controls in short viewports.
+22. Optional reminderTime (HH:mm) is independent of dueDate. Project/global task
+    rows, context menus and the full task editor expose system alarm creation.
+    Saving a time does not claim an alarm is enabled. Opening the system clock
+    passes time and bounded task label with confirmation UI; clock state is not
+    read. Task completion/deletion, clearing the preference and backup restore do
+    not alter system alarms. V3 backups retain validated task/editor reminder
+    times, older backups default to none. Only SET_ALARM permission is added;
+    no network, notification or exact-alarm scheduling permission is requested.

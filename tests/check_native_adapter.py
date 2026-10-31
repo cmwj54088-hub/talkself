@@ -9,7 +9,7 @@ version=ET.parse(r/'android/app/src/main/AndroidManifest.xml').getroot().get('{h
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path=os.environ.get('CHROME_PATH','/usr/bin/chromium'),args=['--no-sandbox'])
  c=b.new_context(viewport={'width':412,'height':892},is_mobile=True,has_touch=True)
- c.add_init_script('''window.testExports=[];window.testClipboard='';window.testCancel=false;window.testFail=false;window.testAborted=0;window.ZiyanAndroid={version:()=> '0.5.0',copyText:t=>{window.testClipboard=t;return true},beginSave:(name,mime)=>{const token=crypto.randomUUID();testExports.push({token,name,mime,chunks:[]});return token},writeSave:(token,data)=>{if(testFail)return false;testExports.find(e=>e.token===token).chunks.push(data);return true},finishSave:token=>queueMicrotask(()=>window.ZiyanFiles.receive(token,!testCancel,'')),abortSave:()=>{testAborted++}}'''.replace('0.5.0',version))
+ c.add_init_script('''window.testAlarms=[];window.testExports=[];window.testClipboard='';window.testCancel=false;window.testFail=false;window.testAborted=0;window.ZiyanAndroid={version:()=> '0.5.0',setTaskAlarm:(...args)=>testAlarms.push(args),copyText:t=>{window.testClipboard=t;return true},beginSave:(name,mime)=>{const token=crypto.randomUUID();testExports.push({token,name,mime,chunks:[]});return token},writeSave:(token,data)=>{if(testFail)return false;testExports.find(e=>e.token===token).chunks.push(data);return true},finishSave:token=>queueMicrotask(()=>window.ZiyanFiles.receive(token,!testCancel,'')),abortSave:()=>{testAborted++}}'''.replace('0.5.0',version))
  page=c.new_page();errors=[];outside=[]
  page.on('pageerror',lambda e:errors.append(str(e)))
  def resource(route):
@@ -23,6 +23,8 @@ with sync_playwright() as p:
  page.goto('https://ziyan.local/');expect(page.locator('.project')).to_have_count(1)
  page.locator('.project').click();page.locator('#message-input').fill('Native backup test');page.locator('#send-button').click();expect(page.locator('.message')).to_have_count(1)
  page.locator('[data-menu]').click();page.locator('#copy-message').click();expect(page.locator('#dialog')).not_to_be_visible();assert page.evaluate('testClipboard')=='Native backup test'
+ page.locator('[data-action="task-mode"]').click();page.locator('#message-input').fill('离线提醒测试');page.locator('#send-button').click()
+ page.locator('.taskbar-toggle').click();page.locator('[data-task-reminder]').click();page.locator('#reminder-time').fill('07:35');page.locator('#reminder-open').click();expect(page.locator('#dialog')).not_to_be_visible();assert page.evaluate('testAlarms')==[[7,35,'离线提醒测试']]
  page.evaluate('window.ziyanGoBack()');page.locator('.mobile-nav:visible [data-page="settings"]').click();expect(page.locator('.page')).to_contain_text('APK '+version);expect(page.locator('[data-action="persist"]')).to_have_count(0)
  page.locator('[data-action="export"]').click();expect(page.locator('#toast')).to_have_text('完整备份已保存')
  data=page.evaluate('JSON.parse(testExports[0].chunks.map(c=>atob(c)).join(""))')

@@ -33,8 +33,12 @@ for name in ['README.md','REQUIREMENTS.md','AGENTS.md','.gitignore','dev-require
              'build_preview.py','package_release.py','android/README.md','android/build.py',
              'android/setup_toolchain.py','android/toolchain-lock.json','android/android.js','android/.gitignore']:
     entries['source/' + name] = (ROOT / name).read_bytes()
-for name in ['v5-fullscreen-editor.png','v5-deadline-tasks.png','enhanced-search.png','forward-note.png','home-swipe-fixed-nav.png','share-preview.png']:
+for name in ['v5-fullscreen-editor.png','v5-deadline-tasks.png','enhanced-search.png','forward-note.png','home-swipe-fixed-nav.png','share-preview.png','wechat-import.png']:
     path = ROOT / 'screenshots' / name
+    if path.exists():
+        entries['verification/' + name] = path.read_bytes()
+for name in ['editor.png','composer-360-400.png','composer-320-360.png','forward-picker.png','task-reminder.png','template-editor.png','drawer-before.png','drawer-expanded.png','drawer-collapsed.png']:
+    path = ROOT / 'evidence/interaction-polish' / name
     if path.exists():
         entries['verification/' + name] = path.read_bytes()
 for name in [f'verification-{version}.json', f'manifest-{version}.txt']:

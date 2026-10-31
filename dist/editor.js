@@ -34,15 +34,16 @@ export function richText(html) {
 }
 
 export function createNoteEditor(api) {
-  const { $, esc, id, request, transaction, toast, failure, onClose, onSave } = api;
+  const { $, esc, id, request, transaction, toast, failure, openSystemAlarm, onClose, onSave } = api;
   let root, kind, projectId, source, key, images = [], selection, timer, dirty = false;
-  let writes = Promise.resolve(), saving = false, uploading = false;
+  let writes = Promise.resolve(), saving = false, uploading = false, opening = false;
   const urls = new Map();
   const plainHTML = text => '<p>' + esc(text || '').replace(/\n/g, '<br>') + '</p>';
   function snapshot() {
     return { id: key, projectId, kind, sourceId: source?.id || null,
       html: kind === 'note' ? cleanRich($('#rich-body').innerHTML) : '',
       text: kind === 'task' ? $('#task-body').value : richText($('#rich-body').innerHTML),
+      reminderTime: kind === 'task' ? $('#task-reminder').value || null : null,
       dueDate: kind === 'task' ? $('#task-due').value || null : null,
       images: kind === 'task' ? [...images] : richMedia($('#rich-body').innerHTML), updated: Date.now() };
   }
@@ -79,25 +80,29 @@ export function createNoteEditor(api) {
   }
   function command(cmd, value) { restoreSelection(); document.execCommand(cmd,false,value); saveSelection(); changed(); }
   async function open(pid, mode, original) {
-    if (root) return;
+    if (root || opening) return;
+    opening=true;
+    try {
     kind = mode; projectId = pid; source = original || null;
     key = `edit-${kind}-${source?.id || projectId}`;
     const saved = await request('drafts','get',key);
-    const data = saved || {html: source?.html || plainHTML(source?.text), text: source?.text || '', images: source?.images || [], dueDate: source?.dueDate || null};
+    const data = saved || {html: source?.html || plainHTML(source?.text), text: source?.text || '', images: source?.images || [], dueDate: source?.dueDate || null, reminderTime: source?.reminderTime || null};
     images = [...(data.images || [])]; selection = null; dirty = false; saving = false;
     root = document.createElement('section'); root.className = 'note-editor'; root.setAttribute('aria-label',kind === 'task' ? '全屏编辑待办' : '全屏编辑笔记');
-    root.innerHTML = `<header class="editor-head"><button class="icon-btn" data-editor="back" aria-label="返回聊天">‹</button><h2>${kind === 'task' ? '编辑待办' : source ? '编辑笔记' : '图文笔记'}</h2><button class="send" data-editor="done">完成</button></header>${kind === 'note' ? `<div class="rich-toolbar" role="toolbar" aria-label="文字排版"><button data-format="formatBlock" data-value="p">正文</button><button data-format="formatBlock" data-value="h2">标题</button><button data-format="bold"><strong>加粗</strong></button><button data-format="insertUnorderedList">列表</button><button data-format="insertOrderedList">编号</button><button data-format="undo" aria-label="撤销编辑">↶</button><button data-format="redo" aria-label="重做编辑">↷</button></div><div id="rich-body" class="rich-body rich-content" contenteditable="true" role="textbox" aria-label="笔记正文" aria-multiline="true" data-placeholder="记录正文，可以插入图片…">${cleanRich(data.html)}</div>` : `<div class="task-edit-area"><label for="task-body">待办内容</label><textarea id="task-body" maxlength="50000" aria-label="待办正文">${esc(data.text)}</textarea><p class="created-time">创建于 ${source ? new Date(source.created).toLocaleString('zh-CN') : '保存时自动记录'}</p><label for="task-due">截止日期（可选）</label><div class="due-field"><input id="task-due" type="date" value="${esc(data.dueDate || '')}" aria-label="截止日期"><button data-editor="clear-due">不设置</button></div><p class="date-help">到期日按当天结束计算。</p><div id="task-images"></div></div>`}<footer class="editor-footer"><button data-editor="image">＋ 插入图片</button><span id="editor-state">内容自动保存到草稿</span></footer><input id="editor-image-input" type="file" accept="image/*" multiple hidden>`;
+    root.innerHTML = `<header class="editor-head"><button class="icon-btn" data-editor="back" aria-label="返回聊天">‹</button><h2>${kind === 'task' ? '编辑待办' : source ? '编辑笔记' : '图文笔记'}</h2><button class="send" data-editor="done">完成</button></header>${kind === 'note' ? `<div class="rich-toolbar" role="toolbar" aria-label="文字排版"><span class="toolbar-group"><button data-format="formatBlock" data-value="p">正文</button><button data-format="formatBlock" data-value="h2">标题</button></span><span class="toolbar-group"><button data-format="bold"><strong>加粗</strong></button><button data-format="insertUnorderedList">列表</button><button data-format="insertOrderedList">编号</button></span><span class="toolbar-group"><button data-format="undo" aria-label="撤销编辑">↶</button><button data-format="redo" aria-label="重做编辑">↷</button></span></div><div id="rich-body" class="rich-body rich-content" contenteditable="true" role="textbox" aria-label="笔记正文" aria-multiline="true" data-placeholder="记录正文，可以插入图片…">${cleanRich(data.html)}</div>` : `<div class="task-edit-area"><label for="task-body">待办内容</label><textarea id="task-body" maxlength="50000" aria-label="待办正文">${esc(data.text)}</textarea><p class="created-time">创建于 ${source ? new Date(source.created).toLocaleString('zh-CN') : '保存时自动记录'}</p><label for="task-due">截止日期（可选）</label><div class="due-field"><input id="task-due" type="date" value="${esc(data.dueDate || '')}" aria-label="截止日期"><button data-editor="clear-due">不设置</button></div><p class="date-help">到期日按当天结束计算。</p><label for="task-reminder">提醒闹钟（可选，与截止日期独立）</label><div class="due-field"><input id="task-reminder" type="time" value="${esc(data.reminderTime || '')}" aria-label="提醒时间"><button data-editor="clear-reminder">清除时间</button></div><button class="text-link alarm-open" data-editor="alarm">保存待办并打开系统闹钟</button><p class="date-help">仅保存时间不会启用闹钟。打开后请在系统时钟确认日期、重复和开关；完成、删除待办或清除时间不会关闭已有闹钟。</p><div id="task-images"></div></div>`}<footer class="editor-footer"><button data-editor="image">＋ 插入图片</button><span id="editor-state">内容自动保存到草稿</span></footer><input id="editor-image-input" type="file" accept="image/*" multiple hidden>`;
     document.body.append(root); $('#app').inert = true;
     if (kind === 'task') drawTaskImages(); else paintImages().catch(failure);
     root.addEventListener('input',changed);
     root.addEventListener('change',e => { if (e.target.id === 'editor-image-input') addImages(e.target.files).catch(failure); else changed(); });
-    root.addEventListener('pointerdown',e => { if (e.target.closest('[data-format]')) { saveSelection(); e.preventDefault(); } });
+    root.addEventListener('pointerdown',e => { if (e.target.closest('[data-format],[data-editor="image"]')) { saveSelection(); e.preventDefault(); } });
     root.addEventListener('click',e => {
       const b = e.target.closest('button'); if (!b) return;
       if (b.dataset.format) { command(b.dataset.format,b.dataset.value); return; }
       if (b.dataset.removeImage) { images = images.filter(mid=>mid!==b.dataset.removeImage); drawTaskImages(); changed(); return; }
       if (b.dataset.editor === 'image') { if (kind==='note') saveSelection(); $('#editor-image-input').value=''; $('#editor-image-input').click(); }
       if (b.dataset.editor === 'clear-due') { $('#task-due').value=''; changed(); }
+      if (b.dataset.editor === 'clear-reminder') { $('#task-reminder').value=''; changed(); }
+      if (b.dataset.editor === 'alarm') { const time=$('#task-reminder').value,text=$('#task-body').value.trim();if(!time)return toast('请选择提醒时间');finish(true).then(ok=>{if(ok)openSystemAlarm(time,text);}).catch(failure); }
       if (b.dataset.editor === 'done') finish(true).catch(failure);
       if (b.dataset.editor === 'back') finish(!!source).catch(failure);
     });
@@ -115,6 +120,7 @@ export function createNoteEditor(api) {
         changed();
       });
     }
+      } finally { opening=false; }
   }
   function drawTaskImages() {
     $('#task-images').innerHTML = images.map(mid=>`<div class="task-image-item"><img data-media="${mid}" alt="待办图片"><button data-remove-image="${mid}" aria-label="移除图片">×</button></div>`).join('');
@@ -147,7 +153,7 @@ export function createNoteEditor(api) {
       if (data.text.length>50000) throw new Error('笔记文字上限为 5 万字');
       await flush();
       if (commit && (data.text.trim() || data.images.length)) await onSave(kind,projectId,source,data);
-      close(); onClose();
+      close(); onClose(); return true;
     } catch(e) { saving=false; if(root)$('[data-editor="done"]').disabled=false; throw e; }
   }
   function close() { clearTimeout(timer); root?.remove(); root=null; $('#app').inert=false; for(const url of urls.values())URL.revokeObjectURL(url); urls.clear(); }

@@ -3,6 +3,13 @@
 /.toolchain/
 /releases/
 /screenshots/
+/evidence/
+/feedback/
+/promo/
+/backups/
+/exports/
+/diagnostics/
+/.codex/
 *.apk
 *.zip
 *.log

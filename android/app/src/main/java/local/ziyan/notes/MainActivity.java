@@ -144,6 +144,10 @@ public final class MainActivity extends Activity {
             }
             @Override public void onHideCustomView() { leaveFullscreen(); }
         });
+        File oldDiagnostics = new File(getFilesDir(), "share-diagnostics");
+        File[] oldLogs = oldDiagnostics.listFiles();
+        if (oldLogs != null) for (File log : oldLogs) if (log.isFile()) log.delete();
+        oldDiagnostics.delete();
         cleanTemporaryFiles(new File(getCacheDir(), "exports"));
         cleanTemporaryFiles(new File(getCacheDir(), "camera"));
         try (InputStream input = getAssets().open("web/index.html")) {
@@ -268,6 +272,24 @@ public final class MainActivity extends Activity {
         }
     }
     public final class NativeFiles {
+        @JavascriptInterface public void setTaskAlarm(int hour, int minute, String label) {
+            if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || label == null || label.length() > 200) return;
+            runOnUiThread(() -> {
+                boolean opened = false;
+                try {
+                    Intent alarm = new Intent(android.provider.AlarmClock.ACTION_SET_ALARM)
+                        .putExtra(android.provider.AlarmClock.EXTRA_HOUR, hour)
+                        .putExtra(android.provider.AlarmClock.EXTRA_MINUTES, minute)
+                        .putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, label)
+                        .putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, false);
+                    startActivity(alarm);
+                    opened = true;
+                } catch (android.content.ActivityNotFoundException | SecurityException error) {
+                    // Keep the saved task and reminder preference; never claim an alarm was enabled.
+                }
+                if (web != null) web.evaluateJavascript("window.ziyanAlarmResult && window.ziyanAlarmResult(" + opened + ")", null);
+            });
+        }
         private final Map<String, SaveJob> jobs = new HashMap<>();
         @JavascriptInterface public String version() { try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception error) { return "unknown"; } }
         @JavascriptInterface public boolean copyText(String text) {
