@@ -64,6 +64,8 @@ html = html.replace('href="icon.svg"', f'href="{icon_data}"')
 html = html.replace('<link rel="stylesheet" href="style.css">', '<style>' + (PROJECT / 'dist/style.css').read_text(encoding='utf-8') + '</style>')
 script = (PROJECT / 'dist/app.js').read_text(encoding='utf-8').replace("import { createInkEditor } from './ink.js';", '')
 script = script.replace("import { cleanRich, richMedia, richText, createNoteEditor } from './editor.js';", '')
+script = script.replace("import { markdownBundle } from './markdown.js';", '')
+script = (PROJECT / 'dist/markdown.js').read_text(encoding='utf-8').replace('export async function ', 'async function ') + '\n' + script
 script = (PROJECT / 'dist/ink.js').read_text(encoding='utf-8').replace('export function createInkEditor', 'function createInkEditor') + '\n' + script
 script = (PROJECT / 'dist/editor.js').read_text(encoding='utf-8').replace('export function ', 'function ') + '\n' + script
 script = script.replace('src="icon.svg"', f'src="{icon_data}"')

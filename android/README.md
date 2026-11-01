@@ -25,3 +25,7 @@ WechatArchive 使用 JDK／Android 内置 ZipFile 解析微信导出的明文聊
 解析成功后通过既有分块桥接交给前端，微信标记只用于预览和保存：正文与图片合成既有 richtext 笔记，视频使用既有 video 记录；原始发送者和时间作为普通正文保存，导入时间为新记录的 created。使用原有 messages/media/projects/meta 原子事务，备份仍为版本 3，数据库仍为版本 2。图片文件引用编辑后不再匹配时附在正文末尾，避免静默丢失附件。系统编解码能力决定媒体能否播放。诊断 Activity、设置按钮和桥接已移除，启动时清理旧 files/share-diagnostics/ 日志，不触碰笔记。
 
 提醒闹钟通过 MainActivity 的 setTaskAlarm 桥接调用系统 ACTION_SET_ALARM，传入小时、分钟和最多 200 字的待办标签，EXTRA_SKIP_UI=false。仅声明 com.android.alarm.permission.SET_ALARM，无网络、通知或精确闹钟调度权限。直接启动系统 Intent 并捕获缺少时钟／安全限制，不读取系统闹钟状态。提醒时间单独存入既有 tasks/drafts；JSON 版本仍为 3、数据库版本仍为 2。系统确认后的闹钟独立于待办生命周期，备份只迁移时间偏好，不会自动创建闹钟。接口依据 [Android AlarmClock](https://developer.android.com/reference/android/provider/AlarmClock)。
+
+## 0.10.0 应用内日期提醒
+
+versionCode 12。TaskReminders 使用 AlarmManager.setExactAndAllowWhileIdle 与本地通知；POST_NOTIFICATIONS、SCHEDULE_EXACT_ALARM 和 RECEIVE_BOOT_COMPLETED 已按用户本轮授权加入，无 INTERNET。仅用户主动启用时进入授权，未授权不声称已预约。已提交 tasks 的启用记录镜像至原生私有偏好；删除、完成、清除后取消，重启和时间／时区变化恢复未来预约，不重放已过期提醒。系统时钟入口仍独立。通知渠道、静音、勿扰及厂商后台限制可能影响声音，真机尚未验收。

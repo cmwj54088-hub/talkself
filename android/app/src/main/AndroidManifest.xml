@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="local.ziyan.notes" android:versionCode="11" android:versionName="0.9.1">
+    package="local.ziyan.notes" android:versionCode="12" android:versionName="0.10.0">
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- Intentionally no INTERNET, camera or shared-storage permissions. -->
+    <queries><intent><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.APP_BROWSER"/></intent></queries>
     <application android:label="自言" android:icon="@drawable/ic_launcher"
         android:theme="@style/AppTheme" android:hardwareAccelerated="true"
         android:allowBackup="false" android:fullBackupContent="false"
         android:usesCleartextTraffic="false" android:supportsRtl="true"
         android:enableOnBackInvokedCallback="false">
+        <receiver android:name=".TaskReminders" android:exported="false"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/><action android:name="android.intent.action.TIME_SET"/><action android:name="android.intent.action.TIMEZONE_CHANGED"/><action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"/></intent-filter></receiver>
         <activity android:name=".MainActivity" android:exported="true"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize"

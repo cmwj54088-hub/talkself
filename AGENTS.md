@@ -19,7 +19,7 @@ model preference or silently substitute another model.
 
 Preserve all requirements in REQUIREMENTS.md. There is no light mode, recording,
 AI service, telemetry, remote font, CDN, cloud sync or account integration.
-The Android manifest only requests SET_ALARM for opening the system clock.
+The Android manifest requests SET_ALARM for the separate system clock plus user-authorized POST_NOTIFICATIONS, SCHEDULE_EXACT_ALARM and RECEIVE_BOOT_COMPLETED for local date reminders.
 It intentionally has no INTERNET permission. Do not add a network permission or
 external runtime dependency. Saving a reminder time does not enable a system alarm.
 

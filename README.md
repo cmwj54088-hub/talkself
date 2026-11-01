@@ -64,3 +64,7 @@ python tests/check_interactions.py
 安装 Node.js 与 Playwright 后，可运行 `node tests/check_records.cjs`、`node tests/check_home_swipes.cjs` 和 `node tests/check_shares.cjs`、`node tests/check_wechat_import.cjs` 检查转发、搜索、触摸滑动及分享接收。分享测试使用打包后的界面和桥接模拟，需要先构建 APK。微信测试先运行 `python tests/check_wechat_archive.py` 生成虚构测试夹具，再运行 `node tests/check_wechat_import.cjs`。真实样本仅在显式传入 `--include-local-evidence` 时读取；本地证据和生成夹具均不提交 Git。测试可通过 `CHROME_PATH` 指定 Chrome 浏览器路径。
 
 APK 构建后运行 `python tests/check_native_adapter.py` 检查内置资源和原生桥接。浏览器测试不替代安卓真机验证。
+
+本轮新增：输入区可全屏展开；项目及分享预览可导出 Markdown（附件随 ZIP）；链接卡片由外部浏览器选择器打开。全局待办可按单项目筛选，顶部花园表示当前范围已完成比例，双击底栏项目可循环定位待办角标。
+
+应用内日期提醒需首次主动启用并授予通知与精确闹钟权限，以通知发声，受静音、勿扰及通知渠道设置影响。完成、删除或清除会取消应用内预约；重启后恢复未来提醒。系统时钟入口仍独立管理。仅保存日期与时间不代表预约。实际手机响铃及厂商后台行为尚待真机验收。

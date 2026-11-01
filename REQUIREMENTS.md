@@ -1,4 +1,4 @@
-# Confirmed behavior · 0.9.1
+# Confirmed behavior · 0.10.0
 
 1. Each project has one persistent composer draft shared by message and task
    modes. Switching modes never clears or swaps the content. Projects have
@@ -111,5 +111,36 @@
     passes time and bounded task label with confirmation UI; clock state is not
     read. Task completion/deletion, clearing the preference and backup restore do
     not alter system alarms. V3 backups retain validated task/editor reminder
-    times, older backups default to none. Only SET_ALARM permission is added;
-    no network, notification or exact-alarm scheduling permission is requested.
+    times, older backups default to none. The original system-clock interface uses SET_ALARM;
+    no network permission is requested. Application reminders in item 24 add explicit notification/exact-alarm authorization.
+
+23. Composer has a full-screen expand/collapse control using the same live project
+    draft and mode, including its attachment panel. Back collapses without sending.
+    The mode control says 切换; the heading identifies note/task mode.
+24. Task reminders have optional local reminderDate, reminderTime and explicit
+    reminderEnabled. Older backups default disabled, without inventing dates.
+    Enabling a future single-shot application reminder requires notification and
+    exact-alarm authorization; Android 13+ notification permission is requested
+    only on user action. Android 12+ uses SCHEDULE_EXACT_ALARM special access.
+    App alarms use notification sound, respecting notification channels, silent
+    mode and DND; no full-screen alarm or guaranteed audible bypass is promised.
+    Completion/deletion/clearing cancels application alarms. Reboot/timezone/time
+    change restores future enabled tasks; past times are not replayed. System-clock
+    alarms remain independent. Denied permissions preserve preferences without
+    claiming scheduling. Android device behavior remains subject to verification.
+25. Task rows expose reminder editing through the existing more menu and editor,
+    with a concise summary instead of a repeated reminder action on every row.
+26. Home header/navigation, ordinary projects and pinned projects use three dark
+    neutral grey levels. Link cards derive only http/https URLs and domains from
+    local text; native ACTION_VIEW with browser selector and explicit chooser
+    opens externally. No INTERNET permission, web metadata request or remote WebView.
+27. Project menus export chronological Markdown including task states and times.
+    Sharing preview exports edited received text and files without first saving
+    a project. Shared UTF-8 exporter returns .md or ZIP with relative attachments;
+    missing/empty attachments fail. Rich styling downgrades to readable text;
+    handwriting exports previews, not editable originals. JSON remains full backup.
+28. Global tasks have one project filter combined with status. The top garden
+    shows completed/total and percentage for that project or all projects, independent
+    of status filter. Empty scope shows an empty garden and 暂无待办. Completion
+    updates the garden without reordering rows. Double tapping Projects cycles
+    through badge-bearing projects in list order and briefly highlights each.

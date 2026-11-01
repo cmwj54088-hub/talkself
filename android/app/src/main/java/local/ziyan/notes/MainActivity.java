@@ -259,7 +259,11 @@ public final class MainActivity extends Activity {
         if (web != null) { web.evaluateJavascript("window.ziyanPersistNow && window.ziyanPersistNow()", null); web.onPause(); }
         super.onPause();
     }
-    @Override protected void onResume() { super.onResume(); if (web != null) web.onResume(); }
+    @Override public void onRequestPermissionsResult(int request, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(request,permissions,results);
+        if(request==1201 && web!=null)web.evaluateJavascript("window.ziyanReminderRefresh && window.ziyanReminderRefresh()",null);
+    }
+    @Override protected void onResume() { super.onResume(); if (web != null) { web.onResume(); web.evaluateJavascript("window.ziyanReminderRefresh && window.ziyanReminderRefresh()",null); } TaskReminders.restore(this); }
     @Override protected void onDestroy() {
         if (fileCallback != null) fileCallback.onReceiveValue(null);
         if (web != null) { web.removeJavascriptInterface("ZiyanAndroid"); web.destroy(); }
@@ -272,6 +276,32 @@ public final class MainActivity extends Activity {
         }
     }
     public final class NativeFiles {
+        @JavascriptInterface public void syncTaskReminders(String json) { if(json!=null&&json.length()<3000000) TaskReminders.replace(MainActivity.this,json); }
+        @JavascriptInterface public boolean reminderPermission() { return TaskReminders.permitted(MainActivity.this); }
+        @JavascriptInterface public void enableTaskReminders() { runOnUiThread(() -> {
+            if(Build.VERSION.SDK_INT>=33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=0) {requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},1201);return;}
+            if(Build.VERSION.SDK_INT>=31 && !((android.app.AlarmManager)getSystemService(ALARM_SERVICE)).canScheduleExactAlarms()) {try{startActivity(new Intent("android.settings.REQUEST_SCHEDULE_EXACT_ALARM",Uri.parse("package:"+getPackageName())));}catch(ActivityNotFoundException e){} return;}
+            TaskReminders.restore(MainActivity.this);
+        }); }
+        @JavascriptInterface public void openExternalLink(String value) {
+            if (value == null || value.length() > 8192) return;
+            android.net.Uri uri = android.net.Uri.parse(value);
+            if (!("https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme())) || uri.getHost() == null) return;
+            runOnUiThread(() -> {
+                boolean opened = false;
+                try {
+                    Intent browser = new Intent(Intent.ACTION_VIEW, uri);
+                    browser.addCategory(Intent.CATEGORY_BROWSABLE);
+                    browser.setSelector(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_BROWSER));
+                    if (browser.resolveActivity(getPackageManager()) == null) throw new ActivityNotFoundException();
+                    startActivity(Intent.createChooser(browser, "选择浏览器"));
+                    opened = true;
+                } catch (android.content.ActivityNotFoundException | SecurityException error) {
+                    // Leave the WebView, draft and reading position intact.
+                }
+                if (web != null) web.evaluateJavascript("window.ziyanExternalResult && window.ziyanExternalResult(" + opened + ")", null);
+            });
+        }
         @JavascriptInterface public void setTaskAlarm(int hour, int minute, String label) {
             if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || label == null || label.length() > 200) return;
             runOnUiThread(() -> {
