@@ -144,3 +144,14 @@
     of status filter. Empty scope shows an empty garden and 暂无待办. Completion
     updates the garden without reordering rows. Double tapping Projects cycles
     through badge-bearing projects in list order and briefly highlights each.
+
+29. Reminder permission and effectiveness status live in Settings: notification,
+    channel, exact alarm access, scheduled future count and scheduling error.
+    Task dialogs/editors direct missing permission to Settings, never request there.
+    Denied notification prompts have an app-notification-settings fallback.
+30. Project rows remain contiguous with subtle inset hairlines, no row gaps.
+    Project task filtering has a searchable single-selection picker. Compact link
+    cards truncate domain/path within bounded dimensions and retain full source URL.
+31. Garden movement uses foreground task-page accelerometer samples, bounded spring
+    animation and reduced-motion support. Stop sensor listening on pause/other pages;
+    absent sensors leave a static garden. No new sensor permission or network.

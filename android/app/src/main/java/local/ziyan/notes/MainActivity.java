@@ -61,6 +61,19 @@ public final class MainActivity extends Activity {
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final NativeFiles nativeFiles = new NativeFiles();
     private String activeExport;
+    private android.hardware.SensorManager gardenSensors;
+    private boolean gardenRequested=false, activityVisible=false;
+    private long lastMotion=0;
+    private final android.hardware.SensorEventListener gardenListener=new android.hardware.SensorEventListener(){
+        public void onAccuracyChanged(android.hardware.Sensor sensor,int accuracy){}
+        public void onSensorChanged(android.hardware.SensorEvent e){
+            long now=android.os.SystemClock.elapsedRealtime();if(!gardenRequested||!activityVisible||now-lastMotion<40)return;lastMotion=now;
+            float x=e.values[0],y=e.values[1];int rotation=getWindowManager().getDefaultDisplay().getRotation();
+            if(rotation==1){float old=x;x=-y;y=old;}else if(rotation==2){x=-x;y=-y;}else if(rotation==3){float old=x;x=y;y=-old;}
+            if(web!=null)web.evaluateJavascript("window.ziyanGardenMotion && window.ziyanGardenMotion("+x+","+y+")",null);
+        }
+    };
+    private void updateMotion(){if(gardenSensors==null)gardenSensors=(android.hardware.SensorManager)getSystemService(SENSOR_SERVICE);gardenSensors.unregisterListener(gardenListener);if(gardenRequested&&activityVisible){android.hardware.Sensor sensor=gardenSensors.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER);if(sensor!=null)gardenSensors.registerListener(gardenListener,sensor,android.hardware.SensorManager.SENSOR_DELAY_GAME);}}
     private long lastBack;
     private View fullscreenView;
     private WebChromeClient.CustomViewCallback fullscreenCallback;
@@ -256,6 +269,7 @@ public final class MainActivity extends Activity {
         });
     }
     @Override protected void onPause() {
+        activityVisible=false;updateMotion();
         if (web != null) { web.evaluateJavascript("window.ziyanPersistNow && window.ziyanPersistNow()", null); web.onPause(); }
         super.onPause();
     }
@@ -263,7 +277,7 @@ public final class MainActivity extends Activity {
         super.onRequestPermissionsResult(request,permissions,results);
         if(request==1201 && web!=null)web.evaluateJavascript("window.ziyanReminderRefresh && window.ziyanReminderRefresh()",null);
     }
-    @Override protected void onResume() { super.onResume(); if (web != null) { web.onResume(); web.evaluateJavascript("window.ziyanReminderRefresh && window.ziyanReminderRefresh()",null); } TaskReminders.restore(this); }
+    @Override protected void onResume() { super.onResume();activityVisible=true;updateMotion(); if (web != null) { web.onResume(); web.evaluateJavascript("window.ziyanReminderRefresh && window.ziyanReminderRefresh()",null); } TaskReminders.restore(this); }
     @Override protected void onDestroy() {
         if (fileCallback != null) fileCallback.onReceiveValue(null);
         if (web != null) { web.removeJavascriptInterface("ZiyanAndroid"); web.destroy(); }
@@ -276,12 +290,17 @@ public final class MainActivity extends Activity {
         }
     }
     public final class NativeFiles {
+        @JavascriptInterface public void setGardenMotion(boolean enabled){runOnUiThread(()->{gardenRequested=enabled;updateMotion();});}
+        @JavascriptInterface public String reminderStatus(){return TaskReminders.status(MainActivity.this).toString();}
+        @JavascriptInterface public void openNotificationSettings(){runOnUiThread(()->{try{startActivity(new Intent("android.settings.APP_NOTIFICATION_SETTINGS").putExtra("android.provider.extra.APP_PACKAGE",getPackageName()));}catch(ActivityNotFoundException e){}});}
         @JavascriptInterface public void syncTaskReminders(String json) { if(json!=null&&json.length()<3000000) TaskReminders.replace(MainActivity.this,json); }
         @JavascriptInterface public boolean reminderPermission() { return TaskReminders.permitted(MainActivity.this); }
         @JavascriptInterface public void enableTaskReminders() { runOnUiThread(() -> {
-            if(Build.VERSION.SDK_INT>=33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=0) {requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},1201);return;}
+            if(Build.VERSION.SDK_INT>=33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=0) {if(getPreferences(0).getBoolean("notificationAsked",false)&&!shouldShowRequestPermissionRationale("android.permission.POST_NOTIFICATIONS")){nativeFiles.openNotificationSettings();return;}getPreferences(0).edit().putBoolean("notificationAsked",true).apply();requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},1201);return;}
             if(Build.VERSION.SDK_INT>=31 && !((android.app.AlarmManager)getSystemService(ALARM_SERVICE)).canScheduleExactAlarms()) {try{startActivity(new Intent("android.settings.REQUEST_SCHEDULE_EXACT_ALARM",Uri.parse("package:"+getPackageName())));}catch(ActivityNotFoundException e){} return;}
+            if(!TaskReminders.status(MainActivity.this).optBoolean("notifications")||!TaskReminders.status(MainActivity.this).optBoolean("channel")){nativeFiles.openNotificationSettings();return;}
             TaskReminders.restore(MainActivity.this);
+            if(web!=null)web.evaluateJavascript("window.ziyanReminderRefresh && window.ziyanReminderRefresh()",null);
         }); }
         @JavascriptInterface public void openExternalLink(String value) {
             if (value == null || value.length() > 8192) return;
