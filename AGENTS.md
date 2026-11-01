@@ -8,8 +8,9 @@ Do not edit generated APK assets or a bundled standalone HTML as the source.
 Read docs/PROJECT_STATUS.md for current decisions and pending clarifications;
 record implemented changes in docs/CHANGELOG.md. Keep pending requests distinct
 from approved behavior and verified releases. These two records live in docs/.
-The active batch is docs/tasks/OFFLINE_EXPERIENCE.md. Read it before changing
+The active batch is docs/tasks/CHAT_RECORDS_AND_TASK_STREAM.md. Read it before changing
 features in that batch and write back actual checks and handoff status there.
+The previous batch and its delivery history remain in docs/tasks/OFFLINE_EXPERIENCE.md.
 Read docs/TOOLCHAIN.md before building or running browser checks. It records
 verified local SDK/JDK/Python/Node/browser paths and PowerShell commands;
 reuse existing tools rather than rediscovering or downloading them each time.
