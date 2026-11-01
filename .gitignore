@@ -33,3 +33,45 @@ password.txt
 
 # Test-generated backups
 /tests/*-backup.json
+
+# Machine-local tooling, credentials and editor state
+.agents/
+.aws/
+.azure/
+.ssh/
+.vscode/
+.idea/
+.venv/
+venv/
+.pytest_cache/
+.playwright/
+playwright-report/
+test-results/
+local.properties
+*.local
+*.local.json
+*.credentials.json
+credentials.json
+secrets.json
+*.secret
+*.secrets
+*.p8
+*.p7b
+*.mobileprovision
+*.dmp
+*.hprof
+*.tmp
+*.bak
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Local user data / conversations (never source fixtures)
+/user-data/
+/chat-exports/
+/share-inbox/
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
