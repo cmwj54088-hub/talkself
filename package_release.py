@@ -24,7 +24,7 @@ with zipfile.ZipFile(private, 'w', zipfile.ZIP_DEFLATED) as archive:
 
 entries = {f'apk/ziyan-{version}.apk': apk.read_bytes(),
            'private/upgrade-signing.zip': private.getvalue()}
-for directory in ['dist', 'android/app/src', 'tests']:
+for directory in ['dist', 'android/app/src', 'tests', 'docs']:
     for path in sorted((ROOT / directory).rglob('*')):
         if not path.is_file() or '__pycache__' in path.parts or path.suffix == '.pyc' or path.name.endswith('-backup.json'):
             continue

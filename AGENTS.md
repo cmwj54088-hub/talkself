@@ -5,6 +5,15 @@ Android-first, completely offline, WeChat-style personal notebook and task app.
 Canonical editable source is dist/*.js, dist/style.css and android/app/src/.
 Do not edit generated APK assets or a bundled standalone HTML as the source.
 
+Read docs/PROJECT_STATUS.md for current decisions and pending clarifications;
+record implemented changes in docs/CHANGELOG.md. Keep pending requests distinct
+from approved behavior and verified releases. These two records live in docs/.
+The active batch is docs/tasks/OFFLINE_EXPERIENCE.md. Read it before changing
+features in that batch and write back actual checks and handoff status there.
+For user-authorized new execution chats, explicitly use gpt-6.1-sol with medium
+reasoning (the user's standing preference). Do not repeatedly ask for the same
+model preference or silently substitute another model.
+
 Preserve all requirements in REQUIREMENTS.md. There is no light mode, recording,
 AI service, telemetry, remote font, CDN, cloud sync or account integration.
 The Android manifest only requests SET_ALARM for opening the system clock.
