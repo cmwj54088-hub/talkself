@@ -10,6 +10,9 @@ record implemented changes in docs/CHANGELOG.md. Keep pending requests distinct
 from approved behavior and verified releases. These two records live in docs/.
 The active batch is docs/tasks/OFFLINE_EXPERIENCE.md. Read it before changing
 features in that batch and write back actual checks and handoff status there.
+Read docs/TOOLCHAIN.md before building or running browser checks. It records
+verified local SDK/JDK/Python/Node/browser paths and PowerShell commands;
+reuse existing tools rather than rediscovering or downloading them each time.
 For user-authorized new execution chats, explicitly use gpt-6.1-sol with medium
 reasoning (the user's standing preference). Do not repeatedly ask for the same
 model preference or silently substitute another model.

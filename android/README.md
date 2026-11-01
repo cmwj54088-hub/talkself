@@ -1,5 +1,7 @@
 # Android container · 0.9.1
 
+本机 SDK、JDK、测试依赖路径与 PowerShell 构建命令统一见 [工具链说明](../docs/TOOLCHAIN.md)。
+
 包名 `local.ziyan.notes`，versionCode 11，最低 API 26，目标 API 35。没有 INTERNET、RECORD_AUDIO、相机或共享存储权限。系统自动备份关闭，用户通过完整 JSON 备份迁移。
 
 MainActivity 原生读取 APK 内的单文档 HTML，再用稳定 HTTPS 应用来源载入。这个来源不进行 DNS 或网络连接，用于保持本地数据库归属。CSP 阻止外部连接、框架和对象；资源拦截也会拒绝额外地址。
