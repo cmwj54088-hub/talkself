@@ -24,7 +24,7 @@ with sync_playwright() as p:
  page.locator('.project').click();page.locator('#message-input').fill('Native backup test');page.locator('#send-button').click();expect(page.locator('.message')).to_have_count(1)
  page.locator('[data-menu]').click();page.locator('#copy-message').click();expect(page.locator('#dialog')).not_to_be_visible();assert page.evaluate('testClipboard')=='Native backup test'
  page.locator('[data-action="task-mode"]').click();page.locator('#message-input').fill('离线提醒测试');page.locator('#send-button').click()
- page.locator('.taskbar-toggle').click();page.locator('[data-task-menu]').click();page.locator('#task-reminder').click();page.locator('#reminder-time').fill('07:35');page.locator('#reminder-open').click();expect(page.locator('#dialog')).not_to_be_visible();assert page.evaluate('testAlarms')==[[7,35,'离线提醒测试']]
+ page.locator('.taskbar-toggle').click();page.locator('.bar-task [data-task-menu]').click();page.locator('#task-reminder').click();page.locator('#reminder-time').fill('07:35');page.locator('#reminder-open').click();expect(page.locator('#dialog')).not_to_be_visible();assert page.evaluate('testAlarms')==[[7,35,'离线提醒测试']]
  page.evaluate('window.ziyanGoBack()');page.locator('.mobile-nav:visible [data-page="settings"]').click();expect(page.locator('.page')).to_contain_text('APK '+version);expect(page.locator('[data-action="persist"]')).to_have_count(0)
  page.locator('[data-action="export"]').click();expect(page.locator('#toast')).to_have_text('完整备份已保存')
  data=page.evaluate('JSON.parse(testExports[0].chunks.map(c=>atob(c)).join(""))')

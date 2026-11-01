@@ -1,11 +1,16 @@
-# Confirmed behavior · 0.10.0
+# Confirmed behavior · 0.11.0
 
 1. Each project has one persistent composer draft shared by message and task
    modes. Switching modes never clears or swaps the content. Projects have
    independent drafts. Older separate drafts merge without discarding text.
    Message Enter is a line break; task Enter starts the next task entry.
-2. Tasks are independent records, never extra chat bubbles. Multiple non-empty
-   lines can be saved together. Saving preserves the drawer's open/closed state.
+2. Tasks remain independent records and are fused with messages for project-stream
+   display, sorted by original creation time and stable ID. Stream bubbles reference
+   existing task IDs: no duplicated messages, migration or external re-import.
+   Both new and historical tasks expose a completion control and strike-through,
+   reversible in the stream; drawer/global list/garden/reminders share the same state.
+   Multiple non-empty composer lines save as separate tasks; images attach to the
+   first. Saving preserves drawer state and returns to note mode.
 3. The project task drawer stays below the chat header. When expanded, its close
    control is at the list bottom. It collapses upward with a curtain animation.
    It shows incomplete tasks only; completing a task removes it immediately from
@@ -78,16 +83,27 @@
     as described below; mini-app/private formats remain unsupported. No accounts
     or chat database access.
 
-18. Remove the diagnostic activity, UI and bridge. Receive one WeChat chat ZIP
-    per share (Chat history.txt plus supported image/video files), preview with
-    editable text, and save only on confirmation. Preserve the exported sender,
-    original timestamps and order in the note body; creation time is import time.
-    Keep inline images in the text note and video attachments as video records.
-    Commit everything atomically into existing stores and v3 backups. Reject
-    missing references, encrypted/corrupt ZIPs, unknown attachments and unsafe
-    paths; enforce 200 MB per ZIP/file, 512 MB unpacked total, 256 entries and
-    50,000 text characters. Do not infer missing sender/time from unmerged text.
-
+18. Receive one WeChat plain chat ZIP per share. Combine exports split on explicit
+    sender/timestamp headings, individual exports on explicit leading-dot entry
+    markers; blank lines alone are never boundaries. Keep equal-sender/equal-time
+    entries separate. Display origin.sender/time independently; missing values are
+    null and visibly unknown. Preserve raw time strings without guessing timezone.
+    origin also records format, batch, order and importedAt. Creation time is import
+    sequence, independent of origin time. Inline image references and attached videos
+    belong to the same original message, not extra send actions. Preview total count,
+    at most 20 summaries per page, and edit the selected message. Unknown grammar or
+    unreferenced media requires explicit whole-text fallback confirmation. Edited
+    broken references reject the whole batch. Persist records/media/project/share
+    marker atomically and prevent replay after interrupted native cleanup.
+    Limits: ZIP/file 200MB, unpacked 512MB, 256 entries, transcript 8MB UTF-8,
+    20000 original messages, 2000000 characters per original record, rich HTML
+    16000000 characters. Never truncate or split on character count. Native staging
+    parses ZIPs off the UI thread and streams transcript/media in 192KB chunks;
+    frontend parsing/conversion yields between blocks. Long stream bodies collapse
+    without changing their ID; editor/export/v3 restore accept the same limits.
+    Keep schema 2 and backup v3, including validated origin and video references;
+    accept old backups without these fields. Retain missing/unsupported archive
+    checks, no private database access, diagnostics UI or runtime network.
 19. Drawer animation, keyboard/viewport resize and late media preserve a bottom
     reader at the bottom and a historical reader at their visible message/line.
     Opening the drawer clips the chat from above without pushing visible text
@@ -114,9 +130,13 @@
     times, older backups default to none. The original system-clock interface uses SET_ALARM;
     no network permission is requested. Application reminders in item 24 add explicit notification/exact-alarm authorization.
 
-23. Composer has a full-screen expand/collapse control using the same live project
-    draft and mode, including its attachment panel. Back collapses without sending.
-    The mode control says 切换; the heading identifies note/task mode.
+23. Composer expansion opens the existing full-page note/task editor, using its
+    header, body and reachable completion controls. Back preserves one project draft
+    and images without sending. Shared composer draft snapshots retain task dates
+    and reminder preferences across note/task modes; bottom sending also retains
+    expanded rich content and images. Task mode offers relevant fields without note
+    formatting controls. Existing-task edits retain ID/time/done state. Saving and
+    draft clearing are atomic and guarded against duplicate completion.
 24. Task reminders have optional local reminderDate, reminderTime and explicit
     reminderEnabled. Older backups default disabled, without inventing dates.
     Enabling a future single-shot application reminder requires notification and
@@ -155,3 +175,13 @@
 31. Garden movement uses foreground task-page accelerometer samples, bounded spring
     animation and reduced-motion support. Stop sensor listening on pause/other pages;
     absent sensors leave a static garden. No new sensor permission or network.
+
+32. Task context menus, including stream bubbles, reuse the multi-project forwarding
+    picker with search/recents. Source remains unchanged. Every destination gets an
+    independent new task ID/time, incomplete status, copied text/images/due date and
+    reminder preferences with reminderEnabled=false. All destinations/media commit
+    atomically; cancellation/failure leaves no partial copy. Derived bubbles never
+    duplicate task counts in exports/backups. Imported notes with attached video are
+    kept as notes when conversion to task cannot preserve those videos.
+33. Android single clipboard copy is bounded at 200000 characters for system IPC;
+    larger records remain editable/exportable and can use partial text selection.

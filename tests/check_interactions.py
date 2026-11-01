@@ -110,9 +110,9 @@ with sync_playwright() as p:
   if 'expanded' not in page.locator('.taskbar').get_attribute('class').split():page.locator('.taskbar-toggle').click()
   page.locator('#message-input').fill('短视口共享草稿');page.locator('[data-action="task-mode"]').click()
   expect(page.locator('#message-input')).to_have_value('短视口共享草稿');expect(page.locator('#send-button')).to_have_text('保存待办')
+  page.screenshot(path=str(OUT/f'composer-{width}-{height}.png'))
   for sel in ['#send-button','[data-action="task-mode"]','#message-input']:
    r=page.locator(sel).bounding_box();assert 0<=r['y'] and r['y']+r['height']<=height+1,(sel,r,height)
-  page.screenshot(path=str(OUT/f'composer-{width}-{height}.png'))
   page.locator('[data-action="task-mode"]').click();expect(page.locator('#message-input')).to_have_value('短视口共享草稿')
  page.locator('[data-action="task-mode"]').click()
  page.evaluate('''()=>{window.taskAdd=IDBObjectStore.prototype.add;IDBObjectStore.prototype.add=function(v){if(this.name==='tasks')throw new DOMException('测试失败','QuotaExceededError');return taskAdd.call(this,v)}}''')
@@ -143,11 +143,11 @@ with sync_playwright() as p:
  # Task reminder from drawer, menu, full editor and creation details; separate deadline.
  page.evaluate('window.alarmCalls=[];window.ZiyanAndroid={version:()=>"test",setTaskAlarm:(...args)=>alarmCalls.push(args)}')
  if 'expanded' not in page.locator('.taskbar').get_attribute('class').split():page.locator('.taskbar-toggle').click()
- page.locator('[data-task-row="task-0"] [data-task-reminder]').click();page.locator('#reminder-time').fill('08:25');page.locator('#reminder-open').click();expect(page.locator('#dialog')).not_to_be_visible()
+ page.locator('.bar-task[data-task-row="task-0"] [data-task-menu]').click();page.locator('#task-reminder').click();page.locator('#reminder-time').fill('08:25');page.locator('#reminder-open').click();expect(page.locator('#dialog')).not_to_be_visible()
  task=next(t for t in rows(page,'tasks') if t['id']=='task-0');assert task['reminderTime']=='08:25' and task['dueDate'] is None
  assert page.evaluate('alarmCalls[0]')==[8,25,'虚构待办 0']
- page.locator('[data-task-row="task-0"] [data-task-menu]').click();page.locator('#task-reminder').click();expect(page.locator('#reminder-time')).to_have_value('08:25');page.locator('#dialog [data-close]').click()
- page.locator('[data-task-row="task-0"] [data-task-menu]').click();page.locator('#edit-task').click();page.locator('#task-due').fill('2026-12-05');page.locator('#task-reminder').fill('10:40');page.locator('[data-editor="done"]').click();expect(page.locator('.note-editor')).to_have_count(0)
+ page.locator('.bar-task[data-task-row="task-0"] [data-task-menu]').click();page.locator('#task-reminder').click();expect(page.locator('#reminder-time')).to_have_value('08:25');page.locator('#dialog [data-close]').click()
+ page.locator('.bar-task[data-task-row="task-0"] [data-task-menu]').click();page.locator('#edit-task').click();page.locator('#task-due').fill('2026-12-05');page.locator('#task-reminder').fill('10:40');page.locator('[data-editor="done"]').click();expect(page.locator('.note-editor')).to_have_count(0)
  task=next(t for t in rows(page,'tasks') if t['id']=='task-0');assert task['reminderTime']=='10:40' and task['dueDate']=='2026-12-05';assert page.evaluate('alarmCalls.length')==1
  page.locator('[data-action="task-mode"]').click();page.locator('#message-input').fill('新建带闹钟的虚构待办');page.locator('[data-action="task-details"]').click();page.locator('#task-reminder').fill('11:45')
  page.set_viewport_size({'width':320,'height':360});page.locator('#task-reminder').scroll_into_view_if_needed();page.screenshot(path=str(OUT/'task-reminder.png'))

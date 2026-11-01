@@ -71,9 +71,9 @@ public final class ShareInbox {
                 }
                 else if (text.isEmpty() && item.getText() != null) text = item.getText().toString();
             }
-            if (text.length() > 50000) throw new IOException("分享文字超过 5 万字，请缩短后重试");
+            if (text.length() > 2000000) throw new IOException("分享文字超过 200 万字，请缩短后重试");
             JSONArray files = new JSONArray();
-            boolean wechat = false;
+            boolean wechat = false;long transcriptSize=0;
             for (Uri uri : uris) {
                 if (uri == null || !"content".equals(uri.getScheme())) throw new IOException("只支持系统授权的本地附件");
                 String name = "", mime = activity.getContentResolver().getType(uri);
@@ -109,7 +109,7 @@ public final class ShareInbox {
                     while ((count = input.read(buffer)) != -1) {
                         total += count;
                         if (total > MAX_FILE) throw new IOException("单个附件上限 200MB");
-                        if (plain && total > 200000) throw new IOException("分享文字超过 5 万字，请缩短后重试");
+                        if (plain && total > 200000) throw new IOException("分享文字超过 200 万字，请缩短后重试");
                         output.write(buffer, 0, count);
                     }
                 }
@@ -117,8 +117,11 @@ public final class ShareInbox {
                 if (archive) {
                     if (uris.size() != 1) throw new IOException("请每次分享一个聊天 ZIP，其他附件请单独分享");
                     WechatArchive.Result chat = WechatArchive.unpack(target, dir, files.length());
-                    text = text.isEmpty() ? chat.text : text + "\n\n" + chat.text;
-                    if (text.length() > 50000) throw new IOException("聊天正文超过 5 万字");
+                    String transcriptText=text.trim().isEmpty()?chat.text:text+"\n\n"+chat.text;
+                    byte[] transcript=transcriptText.getBytes(StandardCharsets.UTF_8);transcriptSize=transcript.length;
+                    if(transcriptSize>8L*1024*1024)throw new IOException("聊天正文超过 8MB UTF-8");
+                    text="";
+                    try(FileOutputStream output=new FileOutputStream(new File(dir,"transcript.txt"))){output.write(transcript);output.getFD().sync();}
                     for (WechatArchive.Part part : chat.parts) files.put(new JSONObject().put("name", part.name).put("mime", part.mime).put("size", part.size));
                     wechat = true; target.delete();
                 } else if (plain) {
@@ -127,12 +130,12 @@ public final class ShareInbox {
                     String value = StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(bytes)).toString();
                     text = text.isEmpty() ? value : text + "\n" + value;
                     target.delete();
-                    if (text.length() > 50000) throw new IOException("分享文字超过 5 万字，请缩短后重试");
+                    if (text.length() > 2000000) throw new IOException("分享文字超过 200 万字，请缩短后重试");
                 } else files.put(new JSONObject().put("name", name).put("mime", mime).put("size", total));
             }
-            if (text.trim().isEmpty() && files.length() == 0) throw new IOException("没有可接收的文字、图片或视频");
+            if (text.trim().isEmpty() && files.length() == 0 && transcriptSize == 0) throw new IOException("没有可接收的文字、图片或视频");
             JSONObject metadata = new JSONObject().put("token", dir.getName()).put("text", text)
-                .put("files", files).put("wechat", wechat).put("created", System.currentTimeMillis());
+                .put("transcriptSize",transcriptSize).put("files", files).put("wechat", wechat).put("created", System.currentTimeMillis());
             try (FileOutputStream output = new FileOutputStream(new File(dir, "ready.tmp"))) {
                 output.write(metadata.toString().getBytes(StandardCharsets.UTF_8)); output.getFD().sync();
             }
@@ -165,6 +168,15 @@ public final class ShareInbox {
             }
         }
         return result.toString();
+    }
+    @JavascriptInterface public synchronized String readText(String token,long offset) {
+        try {
+            File file=new File(directory(token),"transcript.txt");long size=file.length();
+            if(offset<0||offset>=size||size>8L*1024*1024)return "";
+            byte[] bytes=new byte[(int)Math.min(192*1024,size-offset)];
+            try(RandomAccessFile input=new RandomAccessFile(file,"r")){input.seek(offset);input.readFully(bytes);}
+            return Base64.encodeToString(bytes,Base64.NO_WRAP);
+        }catch(Exception ignored){return "";}
     }
     @JavascriptInterface public synchronized String read(String token, int index, long offset) {
         try {

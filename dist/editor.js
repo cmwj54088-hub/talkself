@@ -2,7 +2,8 @@ const SAFE_ID = /^[\w-]{1,150}$/;
 
 export function cleanRich(html) {
   const template = document.createElement('template');
-  template.innerHTML = String(html || '').slice(0, 1000000);
+  if(String(html||'').length>16000000)throw new Error('图文内容超过 16MB 字符限制');
+  template.innerHTML = String(html || '');
   const escape = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function walk(node) {
     if (node.nodeType === 3) return escape(node.textContent);
@@ -34,19 +35,19 @@ export function richText(html) {
 }
 
 export function createNoteEditor(api) {
-  const { $, esc, id, request, transaction, toast, failure, openSystemAlarm, onClose, onSave } = api;
-  let root, kind, projectId, source, key, images = [], selection, timer, dirty = false;
+  const { $, esc, id, request, transaction, toast, failure, openSystemAlarm, onClose, onSave, onDraft } = api;
+  let root, kind, projectId, source, key, composer=false, taskPreferences={}, images = [], selection, timer, dirty = false;
   let writes = Promise.resolve(), saving = false, uploading = false, opening = false;
   const urls = new Map();
   const plainHTML = text => '<p>' + esc(text || '').replace(/\n/g, '<br>') + '</p>';
   function snapshot() {
-    return { id: key, projectId, kind, sourceId: source?.id || null,
+    return { id: key, projectId, kind, composer, sourceId: source?.id || null,
       html: kind === 'note' ? cleanRich($('#rich-body').innerHTML) : '',
       text: kind === 'task' ? $('#task-body').value : richText($('#rich-body').innerHTML),
-      reminderEnabled: kind === 'task' ? $('#task-reminder-enabled').checked : false,
-      reminderDate: kind === 'task' ? $('#task-reminder-date').value || null : null,
-      reminderTime: kind === 'task' ? $('#task-reminder').value || null : null,
-      dueDate: kind === 'task' ? $('#task-due').value || null : null,
+      reminderEnabled: kind === 'task' ? $('#task-reminder-enabled').checked : !!taskPreferences.reminderEnabled,
+      reminderDate: kind === 'task' ? $('#task-reminder-date').value || null : taskPreferences.reminderDate||null,
+      reminderTime: kind === 'task' ? $('#task-reminder').value || null : taskPreferences.reminderTime||null,
+      dueDate: kind === 'task' ? $('#task-due').value || null : taskPreferences.dueDate||null,
       images: kind === 'task' ? [...images] : richMedia($('#rich-body').innerHTML), updated: Date.now() };
   }
   function changed() {
@@ -58,7 +59,7 @@ export function createNoteEditor(api) {
     clearTimeout(timer);
     if (root && dirty) {
       const value = snapshot(); dirty = false;
-      writes = writes.catch(() => {}).then(() => request('drafts', 'put', value)).catch(e => { dirty = true; throw e; });
+      writes = writes.catch(() => {}).then(() => composer ? onDraft(value) : request('drafts', 'put', value)).catch(e => { dirty = true; throw e; });
     }
     await writes;
     if (root && !dirty) $('#editor-state').textContent = '草稿已保存在本机';
@@ -81,17 +82,18 @@ export function createNoteEditor(api) {
     if (selection && $('#rich-body').contains(selection.commonAncestorContainer)) { s.removeAllRanges(); s.addRange(selection); }
   }
   function command(cmd, value) { restoreSelection(); document.execCommand(cmd,false,value); saveSelection(); changed(); }
-  async function open(pid, mode, original) {
+  async function open(pid, mode, original, options={}) {
     if (root || opening) return;
     opening=true;
     try {
-    kind = mode; projectId = pid; source = original || null;
-    key = `edit-${kind}-${source?.id || projectId}`;
+    composer=!!options.composer;kind = mode; projectId = pid; source = original || null;
+    key = composer?`edit-compose-${pid}`:`edit-${kind}-${source?.id || projectId}`;
     const saved = await request('drafts','get',key);
-    const data = saved || {html: source?.html || plainHTML(source?.text), text: source?.text || '', images: source?.images || [], dueDate: source?.dueDate || null, reminderTime: source?.reminderTime || null, reminderDate: source?.reminderDate || null, reminderEnabled: source?.reminderEnabled || false};
-    images = [...(data.images || [])]; selection = null; dirty = false; saving = false;
+    let data = saved || {html: source?.html || plainHTML(source?.text), text: source?.text || '', images: source?.images || [], dueDate: source?.dueDate || null, reminderTime: source?.reminderTime || null, reminderDate: source?.reminderDate || null, reminderEnabled: source?.reminderEnabled || false};
+    if(composer){if(!saved||saved.text!==options.text)data={...data,text:options.text,html:plainHTML(options.text)+(data.images||[]).map(mid=>`<p><img data-media="${mid}" alt="图片"></p>`).join('')};if(kind==='note'&&saved?.kind==='task')data.html=plainHTML(data.text)+(data.images||[]).map(mid=>`<p><img data-media="${mid}" alt="图片"></p>`).join('');}
+    taskPreferences=composer?data:{};images = [...(data.images || [])]; selection = null; dirty = false; saving = false;
     root = document.createElement('section'); root.className = 'note-editor'; root.setAttribute('aria-label',kind === 'task' ? '全屏编辑待办' : '全屏编辑笔记');
-    root.innerHTML = `<header class="editor-head"><button class="icon-btn" data-editor="back" aria-label="返回聊天">‹</button><h2>${kind === 'task' ? '编辑待办' : source ? '编辑笔记' : '图文笔记'}</h2><button class="send" data-editor="done">完成</button></header>${kind === 'note' ? `<div class="rich-toolbar" role="toolbar" aria-label="文字排版"><span class="toolbar-group"><button data-format="formatBlock" data-value="p">正文</button><button data-format="formatBlock" data-value="h2">标题</button></span><span class="toolbar-group"><button data-format="bold"><strong>加粗</strong></button><button data-format="insertUnorderedList">列表</button><button data-format="insertOrderedList">编号</button></span><span class="toolbar-group"><button data-format="undo" aria-label="撤销编辑">↶</button><button data-format="redo" aria-label="重做编辑">↷</button></span></div><div id="rich-body" class="rich-body rich-content" contenteditable="true" role="textbox" aria-label="笔记正文" aria-multiline="true" data-placeholder="记录正文，可以插入图片…">${cleanRich(data.html)}</div>` : `<div class="task-edit-area"><label for="task-body">待办内容</label><textarea id="task-body" maxlength="50000" aria-label="待办正文">${esc(data.text)}</textarea><p class="created-time">创建于 ${source ? new Date(source.created).toLocaleString('zh-CN') : '保存时自动记录'}</p><label for="task-due">截止日期（可选）</label><div class="due-field"><input id="task-due" type="date" value="${esc(data.dueDate || '')}" aria-label="截止日期"><button data-editor="clear-due">不设置</button></div><p class="date-help">到期日按当天结束计算。</p><label for="task-reminder-date">提醒日期</label><input id="task-reminder-date" type="date" value="${esc(data.reminderDate || '')}" aria-label="提醒日期"><label for="task-reminder">提醒闹钟（可选，与截止日期独立）</label><div class="due-field"><input id="task-reminder" type="time" value="${esc(data.reminderTime || '')}" aria-label="提醒时间"><button data-editor="clear-reminder">清除时间</button></div><label><input id="task-reminder-enabled" type="checkbox" ${data.reminderEnabled?'checked':''}>应用内日期提醒</label><p class="date-help">权限与生效状态请到「设置 → 提醒授权与状态」查看。</p><button class="text-link alarm-open" data-editor="alarm">保存待办并打开系统闹钟</button><p class="date-help">启用应用内提醒需通知和精确闹钟授权，以系统通知发声，受静音、勿扰及通知渠道设置影响。完成、删除或清除会取消应用内预约。系统时钟入口独立管理，不能传入指定年月日。</p><div id="task-images"></div></div>`}<footer class="editor-footer"><button data-editor="image">＋ 插入图片</button><span id="editor-state">内容自动保存到草稿</span></footer><input id="editor-image-input" type="file" accept="image/*" multiple hidden>`;
+    root.innerHTML = `<header class="editor-head"><button class="icon-btn" data-editor="back" aria-label="返回聊天">‹</button><h2>${composer?(kind==='task'?'发送待办':'发送笔记'):kind === 'task' ? '编辑待办' : source ? '编辑笔记' : '图文笔记'}</h2><button class="send" data-editor="done">${composer?(kind==='task'?'保存待办':'发送'):'完成'}</button></header>${kind === 'note' ? `<div class="rich-toolbar" role="toolbar" aria-label="文字排版"><span class="toolbar-group"><button data-format="formatBlock" data-value="p">正文</button><button data-format="formatBlock" data-value="h2">标题</button></span><span class="toolbar-group"><button data-format="bold"><strong>加粗</strong></button><button data-format="insertUnorderedList">列表</button><button data-format="insertOrderedList">编号</button></span><span class="toolbar-group"><button data-format="undo" aria-label="撤销编辑">↶</button><button data-format="redo" aria-label="重做编辑">↷</button></span></div><div id="rich-body" class="rich-body rich-content" contenteditable="true" role="textbox" aria-label="笔记正文" aria-multiline="true" data-placeholder="记录正文，可以插入图片…">${cleanRich(data.html)}</div>` : `<div class="task-edit-area"><label for="task-body">${composer?'每行一条待办；图片附在第一条':'待办内容'}</label><textarea id="task-body" maxlength="2000000" aria-label="待办正文">${esc(data.text)}</textarea><p class="created-time">创建于 ${source ? new Date(source.created).toLocaleString('zh-CN') : '保存时自动记录'}</p><label for="task-due">截止日期（可选）</label><div class="due-field"><input id="task-due" type="date" value="${esc(data.dueDate || '')}" aria-label="截止日期"><button data-editor="clear-due">不设置</button></div><p class="date-help">到期日按当天结束计算。</p><label for="task-reminder-date">提醒日期</label><input id="task-reminder-date" type="date" value="${esc(data.reminderDate || '')}" aria-label="提醒日期"><label for="task-reminder">提醒闹钟（可选，与截止日期独立）</label><div class="due-field"><input id="task-reminder" type="time" value="${esc(data.reminderTime || '')}" aria-label="提醒时间"><button data-editor="clear-reminder">清除时间</button></div><label><input id="task-reminder-enabled" type="checkbox" ${data.reminderEnabled?'checked':''}>应用内日期提醒</label><p class="date-help">权限与生效状态请到「设置 → 提醒授权与状态」查看。</p><button class="text-link alarm-open" data-editor="alarm">保存待办并打开系统闹钟</button><p class="date-help">启用应用内提醒需通知和精确闹钟授权，以系统通知发声，受静音、勿扰及通知渠道设置影响。完成、删除或清除会取消应用内预约。系统时钟入口独立管理，不能传入指定年月日。</p><div id="task-images"></div></div>`}<footer class="editor-footer"><button data-editor="image">＋ 插入图片</button><span id="editor-state">内容自动保存到草稿</span></footer><input id="editor-image-input" type="file" accept="image/*" multiple hidden>`;
     document.body.append(root); $('#app').inert = true;
     if (kind === 'task') drawTaskImages(); else paintImages().catch(failure);
     root.addEventListener('input',changed);
@@ -123,6 +125,7 @@ export function createNoteEditor(api) {
         changed();
       });
     }
+    if(composer){const body=$(kind==='task'?'#task-body':'#rich-body');body.focus();if(kind==='task')body.setSelectionRange(body.value.length,body.value.length);else{const range=document.createRange();range.selectNodeContents(body);range.collapse(false);const selected=window.getSelection();selected.removeAllRanges();selected.addRange(range);}}
       } finally { opening=false; }
   }
   function drawTaskImages() {
@@ -152,15 +155,15 @@ export function createNoteEditor(api) {
     saving=true; $('[data-editor="done"]').disabled=true;
     try {
       const data=snapshot();
-      if(commit&&data.reminderEnabled&&(!data.reminderDate||!data.reminderTime||new Date(data.reminderDate+'T'+data.reminderTime).getTime()<=Date.now()))throw new Error('请选择未来提醒日期和时间');
-      if(commit&&data.reminderEnabled&&!window.ZiyanAndroid?.reminderPermission?.())throw new Error('请到设置 → 提醒授权与状态开启权限，或关闭应用内提醒');
-      if(commit&&!data.text.trim()&&!data.images.length)throw new Error('请填写内容或插入图片');
-      if (data.text.length>50000) throw new Error('笔记文字上限为 5 万字');
+      if(commit&&kind==='task'&&data.reminderEnabled&&(!data.reminderDate||!data.reminderTime||new Date(data.reminderDate+'T'+data.reminderTime).getTime()<=Date.now()))throw new Error('请选择未来提醒日期和时间');
+      if(commit&&kind==='task'&&data.reminderEnabled&&!window.ZiyanAndroid?.reminderPermission?.())throw new Error('请到设置 → 提醒授权与状态开启权限，或关闭应用内提醒');
+      if(commit&&!data.text.trim()&&!data.images.length&&!source?.attachments?.length)throw new Error('请填写内容或插入图片');
+      if (data.text.length>2000000) throw new Error('单条内容上限为 200 万字');
       await flush();
-      if (commit && (data.text.trim() || data.images.length)) await onSave(kind,projectId,source,data);
+      if (commit && (data.text.trim() || data.images.length || source?.attachments?.length)) await onSave(kind,projectId,source,data);
       close(); onClose(); return true;
     } catch(e) { saving=false; if(root)$('[data-editor="done"]').disabled=false; throw e; }
   }
   function close() { clearTimeout(timer); root?.remove(); root=null; $('#app').inert=false; for(const url of urls.values())URL.revokeObjectURL(url); urls.clear(); }
-  return {open,flush,back:()=>finish(!!source)};
+  return {open,flush,save:()=>finish(true),back:()=>finish(!!source)};
 }

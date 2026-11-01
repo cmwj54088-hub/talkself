@@ -342,7 +342,7 @@ public final class MainActivity extends Activity {
         private final Map<String, SaveJob> jobs = new HashMap<>();
         @JavascriptInterface public String version() { try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception error) { return "unknown"; } }
         @JavascriptInterface public boolean copyText(String text) {
-            if (text == null || text.length() > 50000) return false;
+            if (text == null || text.length() > 200000) return false;
             runOnUiThread(() -> ((ClipboardManager)getSystemService(CLIPBOARD_SERVICE))
                 .setPrimaryClip(ClipData.newPlainText("笔记", text))); return true;
         }

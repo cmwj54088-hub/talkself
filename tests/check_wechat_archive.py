@@ -3,7 +3,15 @@ Use --include-local-evidence to explicitly opt into private local evidence.
 Writes local bridge fixtures under ignored releases/; private evidence is never packaged.
 """
 from pathlib import Path
-import base64, json, struct, subprocess, sys, tempfile, zipfile
+import base64, json, struct, subprocess, sys, tempfile, zipfile, uuid, shutil
+from contextlib import contextmanager
+
+@contextmanager
+def fixture_directory(root):
+ folder=root/("wechat-qa-"+uuid.uuid4().hex);folder.mkdir()
+ try:yield str(folder)
+ finally:
+  if folder.resolve().is_relative_to(root.resolve()):shutil.rmtree(folder)
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'releases';OUT.mkdir(exist_ok=True)
@@ -19,7 +27,7 @@ public class ArchiveTest {
  }
 }'''
 png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=')
-with tempfile.TemporaryDirectory(prefix='wechat-qa-',dir=OUT) as temporary:
+with fixture_directory(OUT) as temporary:
  folder=Path(temporary);assert folder.resolve().is_relative_to(OUT.resolve())
  source=folder/'ArchiveTest.java';source.write_text(harness,encoding='utf-8')
  subprocess.run(['javac','-encoding','UTF-8','--release','8','-d',str(folder),str(ROOT/'android/app/src/main/java/local/ziyan/notes/WechatArchive.java'),str(source)],check=True)
@@ -43,6 +51,7 @@ with tempfile.TemporaryDirectory(prefix='wechat-qa-',dir=OUT) as temporary:
    files.append({'name':base64.b64decode(encoded).decode('utf-8'),'mime':mime,'size':len(data),'base64':base64.b64encode(data).decode()})
   return {'name':path.name,'text':text,'files':files,'wechat':True}
  valid=[archive('single',[('Chat history.txt','·第一条')]),archive('merged',[('Chat history.txt','·测试者\n2026/10/31 20:40\n第一条\n\n·测试者\n2026/10/31 20:41\n第二条')]),archive('individual',[('Chat history.txt','·第一条\n\n·第二条')]),archive('image',[('Chat history.txt','·测试者\n2026/10/31 20:40\n[Photo] first.png\n\n<script>bad()</script> & 文本\n\n[Photo] second.png'),('media/first.png',png),('media/second.png',png)]),archive('video',[('Chat history.txt','·测试者\n2026/10/31 20:40\n[Video] movie.mp4'),('media/movie.mp4',b'video-byte-fixture')])]
+ valid.append(archive('long',[('Chat history.txt','·合成发送者\n2026/10/31 20:40\n'+'字'*60000+'\n\n·合成发送者\n2026/10/31 20:40\n'+'文'*60000)]))
  fixtures=[run(path) for path in valid]
  assert '2026/10/31' in fixtures[1]['text'] and '2026/10/31' not in fixtures[2]['text']
  assert len(fixtures[3]['files'])==2 and base64.b64decode(fixtures[3]['files'][0]['base64'])==png
@@ -52,7 +61,7 @@ with tempfile.TemporaryDirectory(prefix='wechat-qa-',dir=OUT) as temporary:
   ('missing-text',[('media/x.png',png)]),
   ('missing-image',[('Chat history.txt','[Photo] missing.png')]),
   ('unsupported',[('Chat history.txt','text'),('a.png',png),('file.pdf',b'%PDF')]),
-  ('oversize-text',[('Chat history.txt','字'*50001)]),
+  ('oversize-text',[('Chat history.txt','字'*(8*1024*1024//3+1))]),
   ('invalid-utf8',[('Chat history.txt',b'\xff\xff')]),
   ('entry-limit',[('Chat history.txt','text')]+[(f'media/{i}.png',png) for i in range(256)]),
  ]:run(archive(name,items),False)

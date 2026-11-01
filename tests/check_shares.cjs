@@ -27,8 +27,7 @@ async function deliver(page,item){await page.evaluate(item=>{shareQueue.push(ite
     const raw=item.mime.startsWith('image/')?Uint8Array.from(atob(sharePng),c=>c.charCodeAt(0)):item.mime==='video/webm'?window.shareMovie:bytes;
     return btoa(Array.from(raw.slice(offset,offset+192*1024),c=>String.fromCharCode(c)).join(''));
    }};
-   const put=IDBObjectStore.prototype.put;
-   IDBObjectStore.prototype.put=function(...args){if(failShareWrite&&this.name==='media')throw new DOMException('test quota','QuotaExceededError');return put.apply(this,args);};
+   for(const method of ['put','add']){const original=IDBObjectStore.prototype[method];IDBObjectStore.prototype[method]=function(...args){if(failShareWrite&&this.name==='media')throw new DOMException('test quota','QuotaExceededError');return original.apply(this,args);};}
   },{initial,png});
   const page=await context.newPage(),errors=[],outside=[];
   page.on('pageerror',e=>errors.push(e.message));

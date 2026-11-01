@@ -18,7 +18,7 @@ def nav(page,tab):
 def send(page,text):
     page.locator('#message-input').fill(text);page.locator('#send-button').click()
 def task_edit(page,text):
-    page.locator('[data-task-row]').filter(has_text=text).locator('[data-task-menu]').click()
+    page.locator('.bar-task,.task-card').filter(has_text=text).locator('[data-task-menu]').click()
     page.locator('#edit-task').click();expect(page.locator('.note-editor')).to_be_visible()
 def finish(page):
     page.locator('[data-editor="done"]').click();expect(page.locator('.note-editor')).to_have_count(0)
@@ -42,7 +42,7 @@ with sync_playwright() as p:
     page.locator('[data-action="task-mode"]').click();page.locator('#send-button').click()
     expect(page.locator('#message-input')).to_have_value('')
     assert len(records(page,'tasks'))==2
-    expect(page.locator('.message')).to_have_count(0)
+    expect(page.locator('.task-message')).to_have_count(2)
     expect(page.locator('.taskbar-toggle')).to_have_attribute('aria-expanded','false')
     page.locator('.taskbar-toggle').click();expect(page.locator('.taskbar')).to_have_class('taskbar expanded')
     expect(page.locator('.taskbar-close')).to_be_visible()
@@ -54,16 +54,16 @@ with sync_playwright() as p:
     print('PASS unified input survives mode switches/reload; multi-task save stays collapsed; direct text editing and bottom collapse')
 
     send(page,'这是一段需要修改的长笔记。')
-    expect(page.locator('.message')).to_have_count(1)
+    expect(page.locator('.message:not(.task-message)')).to_have_count(1)
     # Real long-press timing and anchored menu, rather than center-screen modal.
-    page.locator('.bubble').dispatch_event('pointerdown',{'pointerType':'touch','pointerId':5,'clientX':250,'clientY':350})
+    page.locator('.message:not(.task-message) .bubble').dispatch_event('pointerdown',{'pointerType':'touch','pointerId':5,'clientX':250,'clientY':350})
     page.wait_for_timeout(600)
-    page.locator('.bubble').dispatch_event('pointerup',{'pointerType':'touch','pointerId':5,'clientX':250,'clientY':350})
+    page.locator('.message:not(.task-message) .bubble').dispatch_event('pointerup',{'pointerType':'touch','pointerId':5,'clientX':250,'clientY':350})
     expect(page.locator('.context-menu')).to_be_visible();expect(page.locator('#dialog')).not_to_be_visible()
     page.locator('#select-message').click();expect(page.locator('.selection-view')).to_be_visible()
     expect(page.locator('#selection-text')).to_have_value('这是一段需要修改的长笔记。')
     page.locator('#selection-back').click();page.wait_for_timeout(100)
-    context(page,'.message');page.locator('#edit-message').click()
+    context(page,'.message:not(.task-message)');page.locator('#edit-message').click()
     expect(page.locator('.note-editor')).to_be_visible()
     page.locator('#rich-body').fill('牛顿第二定律\n已知质量与加速度，求合力。')
     page.locator('#rich-body').evaluate('''el=>{el.focus();const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r)}''')
@@ -77,7 +77,7 @@ with sync_playwright() as p:
     rich=records(page,'messages')[0]
     assert rich['type']=='richtext' and '<strong>' in rich['html'] and 'data-media=' in rich['html'] and 'blob:' not in rich['html']
     page.wait_for_function('document.querySelector(".rich-bubble img")?.naturalWidth>0')
-    context(page,'.message');page.locator('#edit-message').click()
+    context(page,'.message:not(.task-message)');page.locator('#edit-message').click()
     expect(page.locator('#rich-body img')).to_have_count(1)
     page.screenshot(path=str(SCREEN/'v5-fullscreen-editor.png'))
     page.locator('[data-editor="back"]').click();expect(page.locator('.note-editor')).to_have_count(0)
@@ -90,7 +90,7 @@ with sync_playwright() as p:
     page.locator('#editor-image-input').set_input_files(image)
     page.wait_for_function('document.querySelector("#task-images img")?.naturalWidth>0')
     finish(page)
-    row=page.locator('[data-task-row]').filter(has_text='完成数学练习')
+    row=page.locator('.bar-task,.task-card').filter(has_text='完成数学练习')
     expect(row.locator('.task-created')).to_contain_text('创建')
     expect(row.locator('.task-due')).to_contain_text(due)
     expect(row.locator('.task-photos img')).to_have_count(1)
@@ -159,7 +159,7 @@ with sync_playwright() as p:
     print('PASS v3 backup to an independent browser retains rich images/deadlines; broken references rejected atomically')
     page.evaluate('navigator.serviceWorker.ready');page.wait_for_function('navigator.serviceWorker.controller!==null')
     c.set_offline(True);page.reload();expect(page.locator('.project')).to_have_count(1)
-    page.locator('.project').click();context(page,'.message');page.locator('#edit-message').click();expect(page.locator('.note-editor')).to_be_visible()
+    page.locator('.project').click();context(page,'.message:not(.task-message)');page.locator('#edit-message').click();expect(page.locator('.note-editor')).to_be_visible()
     page.locator('[data-editor="back"]').click();expect(page.locator('.note-editor')).to_have_count(0)
     c.set_offline(False)
     page.set_viewport_size({'width':360,'height':740});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')

@@ -46,7 +46,7 @@ final class WechatArchive {
                 boolean transcript=path.equals("Chat history.txt")||path.equals("聊天记录.txt");
                 String name=path.substring(path.lastIndexOf('/')+1);
                 if(name.isEmpty()||name.length()>180||name.chars().anyMatch(c->c<32)||!names.add(name))throw new IOException("聊天 ZIP 附件名无效或重复");
-                long limit=transcript?200000:MAX_FILE;
+                long limit=transcript?8L*1024*1024:MAX_FILE;
                 if(entry.getSize()<0||entry.getSize()>limit||entry.getSize()>MAX_TOTAL-total)throw new IOException("聊天 ZIP 解压大小超过限制");
                 if(transcript&&result.text!=null)throw new IOException("聊天 ZIP 中存在多份聊天正文");
                 String type=transcript?"":mime(name);int index=startIndex+result.parts.size();
@@ -66,7 +66,7 @@ final class WechatArchive {
                 if(transcript) {
                     result.text=StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(text.toByteArray())).toString()
                         .replace("\uFEFF","").replace("\r\n","\n").replace('\r','\n');
-                    if(result.text.trim().isEmpty()||result.text.length()>50000)throw new IOException("聊天正文为空或超过 5 万字");
+                    if(result.text.trim().isEmpty()||result.text.length()>8*1024*1024)throw new IOException("聊天正文为空或超过 8MB");
                 } else {
                     if(size==0)throw new IOException("聊天 ZIP 含空附件");
                     result.parts.add(new Part(name,type,size,index));

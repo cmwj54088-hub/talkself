@@ -6,6 +6,7 @@ const root=path.resolve(__dirname,'..');
 const fixtures=JSON.parse(fs.readFileSync(path.join(root,'releases/wechat-fixtures.json'),'utf8'));
 async function rows(page,store){return page.evaluate(async store=>{const db=await new Promise(r=>{const q=indexedDB.open('ziyan-local-v1',2);q.onsuccess=()=>r(q.result);});const data=await new Promise(r=>{const q=db.transaction(store).objectStore(store).getAll();q.onsuccess=()=>r(q.result);});db.close();return data;},store);}
 (async()=>{
+ const {parseChat,chatFileIndexes}=await import('data:text/javascript;base64,'+fs.readFileSync(path.join(root,'dist/chat-import.js')).toString('base64'));
  const browser=await chromium.launch({executablePath:process.env.CHROME_PATH});
  try{
   const context=await browser.newContext({viewport:{width:360,height:800},isMobile:true,hasTouch:true});
@@ -14,7 +15,7 @@ async function rows(page,store){return page.evaluate(async store=>{const db=awai
    window.ZiyanAndroid={version:()=> '0.9.0',copyText:()=>true,beginSave:(name,mime)=>{const token=crypto.randomUUID();exports.push({token,chunks:[]});return token;},writeSave:(token,data)=>{exports.find(e=>e.token===token).chunks.push(data);return true;},finishSave:token=>queueMicrotask(()=>ZiyanFiles.receive(token,true,'')),abortSave:()=>{}};
    window.ZiyanShareInbox={pending:()=>JSON.stringify(inbox),discard:token=>{inbox=inbox.filter(x=>x.token!==token);},read:(token,i,offset)=>atob(inbox.find(x=>x.token===token).files[i].base64).slice(offset,offset+192*1024)};
    const read=ZiyanShareInbox.read;ZiyanShareInbox.read=(...args)=>btoa(read(...args));
-   const put=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(...args){if(failWechat&&this.name==='media')throw new DOMException('fixture','QuotaExceededError');return put.apply(this,args);};
+   for(const method of ['put','add']){const original=IDBObjectStore.prototype[method];IDBObjectStore.prototype[method]=function(...args){if(failWechat&&this.name==='media')throw new DOMException('fixture','QuotaExceededError');return original.apply(this,args);};}
   });
   const page=await context.newPage(),errors=[],external=[];
   page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(!/^(https:\/\/ziyan.local\/|blob:|data:)/.test(r.url()))external.push(r.url());});
@@ -26,22 +27,21 @@ async function rows(page,store){return page.evaluate(async store=>{const db=awai
    const fixture={...fixtures[i],token:'wechat-'+i,created:i};
    await page.evaluate(f=>{inbox.push(f);ZiyanShares.available();},fixture);
    await expect(page.locator('.share-preview h3')).toHaveText('接收微信聊天记录');await expect(page.locator('#share-save')).toBeEnabled();
-   await expect(page.locator('#share-text')).toHaveValue(fixture.text);
-   const images=fixture.files.filter(f=>f.mime.startsWith('image/'));
+   const parsed=await parseChat(fixture.text);await expect(page.locator('#share-text')).toHaveValue(parsed.messages[0].text);
+   const images=chatFileIndexes(parsed.messages[0].text,fixture.files).map(i=>fixture.files[i]).filter(f=>f.mime.startsWith('image/'));
    await expect(page.locator('#share-wechat-preview img')).toHaveCount(images.length);
    if(images.length)await expect.poll(()=>page.locator('#share-wechat-preview img').evaluateAll(list=>list.every(e=>e.complete&&e.naturalWidth>0))).toBe(true);
    if(fixture.name==='image.zip'){
     await expect(page.locator('#share-wechat-preview script')).toHaveCount(0);await expect(page.locator('#share-wechat-preview')).toContainText('<script>bad()</script>');
-    const order=await page.locator('#share-wechat-preview').evaluate(e=>Array.from(e.children).map(x=>x.tagName==='IMG'?x.alt:x.textContent));
-    assert(order.indexOf('first.png')<order.findIndex(x=>x.includes('<script>')));assert(order.indexOf('second.png')>order.findIndex(x=>x.includes('<script>')));
+    await expect(page.locator('#share-wechat-preview img').first()).toHaveAttribute('alt','first.png');await expect(page.locator('#share-wechat-preview img').last()).toHaveAttribute('alt','second.png');
     await page.screenshot({path:path.join(root,'screenshots/wechat-import.png')});
     await page.evaluate(()=>failWechat=true);await page.locator('#share-save').click();await expect(page.locator('#share-status')).toContainText('未保存任何分享记录');
     assert.equal((await rows(page,'messages')).length,expectedRecords);assert.equal((await rows(page,'media')).length,expectedMedia);
     await page.evaluate(()=>failWechat=false);
    }
-   if(fixture.name==='single.zip')await page.locator('#share-text').fill(fixture.text+'（已编辑）');
+   if(fixture.name==='single.zip')await page.locator('#share-text').fill(parsed.messages[0].text+'（已编辑）');
    await page.locator('#share-save').click();await expect(page.locator('.share-preview')).toHaveCount(0);
-   expectedRecords+=1+fixture.files.filter(f=>f.mime.startsWith('video/')).length;expectedMedia+=fixture.files.length;
+   expectedRecords+=parsed.messages.length;expectedMedia+=fixture.files.length;
    assert.equal((await rows(page,'messages')).length,expectedRecords);assert.equal((await rows(page,'media')).length,expectedMedia);
    await expect(page.locator('#message-input')).toHaveValue('保留的项目草稿');
   }

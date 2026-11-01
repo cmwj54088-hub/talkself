@@ -33,6 +33,18 @@
     available() { this.onAvailable?.(); },
     list() { return JSON.parse(ZiyanShareInbox.pending()).sort((a,b)=>a.created-b.created||a.token.localeCompare(b.token)); },
     discard(token) { ZiyanShareInbox.discard(token); },
+    async text(token,size,cancelled) {
+      if(!Number.isSafeInteger(size)||size<=0||size>8*1024*1024)throw new Error('聊天正文上限为 8MB');
+      const decoder=new TextDecoder('utf-8',{fatal:true}),chunks=[];
+      for(let offset=0;offset<size;){
+        if(cancelled())throw new Error('分享已取消');
+        const raw=atob(ZiyanShareInbox.readText(token,offset));
+        if(raw.length!==Math.min(192*1024,size-offset))throw new Error('聊天正文读取失败，请重试');
+        chunks.push(decoder.decode(Uint8Array.from(raw,c=>c.charCodeAt(0)),{stream:true}));offset+=raw.length;
+        await new Promise(resolve=>setTimeout(resolve,0));
+      }
+      chunks.push(decoder.decode());return chunks.join('');
+    },
     async file(token, index, item, cancelled) {
       if (!/^(image|video)\/[a-zA-Z0-9.+-]+$/.test(item.mime) ||
           !Number.isSafeInteger(item.size) || item.size <= 0 || item.size > 200*1024*1024)
