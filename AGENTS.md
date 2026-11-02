@@ -36,6 +36,13 @@ desktop file or third-party reference repositories for routine development.
   -> coordinator review -> user acceptance in the main coordination chat ->
   state writeback. An explicit acceptance of a particular scope/version in the
   development chat remains valid and must be synchronized, not requested again.
+- User-confirmed policy (2026-11-02): explicit full acceptance of an identified
+  version/scope authorizes its local merge into main. The original execution
+  chat performs that merge after receiving the recorded acceptance; the main
+  coordinator relays the result, verifies the merge/containment and updates status,
+  rather than performing the merge itself. Partial acceptance does not trigger
+  whole-branch merge. This policy is not acceptance of the current candidate.
+  Push, publication and branch/worktree deletion remain separately authorized.
 - Before dispatch save task scope, baseline, owner, acceptance steps and handoff
   path. Define who receives the report and how. Direct cross-chat messages need
   the user's corresponding authorization and tool support. Otherwise save the
