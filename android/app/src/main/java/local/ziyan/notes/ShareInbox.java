@@ -73,7 +73,7 @@ public final class ShareInbox {
             }
             if (text.length() > 2000000) throw new IOException("分享文字超过 200 万字，请缩短后重试");
             JSONArray files = new JSONArray();
-            boolean wechat = false;long transcriptSize=0;
+            boolean wechat = false;long transcriptSize=0,batchBytes=0;
             for (Uri uri : uris) {
                 if (uri == null || !"content".equals(uri.getScheme())) throw new IOException("只支持系统授权的本地附件");
                 String name = "", mime = activity.getContentResolver().getType(uri);
@@ -95,8 +95,7 @@ public final class ShareInbox {
                 }
                 boolean archive = "application/zip".equals(mime) || "application/x-zip-compressed".equals(mime);
                 boolean plain = "text/plain".equals(mime);
-                if (!plain && !archive && (mime == null || !mime.matches("(?:image|video)/[a-zA-Z0-9.+-]+")))
-                    throw new IOException("此分享格式不支持，请选择文字、图片、视频或微信聊天 ZIP");
+                if(mime==null||!mime.matches("[a-zA-Z0-9.+-]+/[a-zA-Z0-9.+-]+"))mime="application/octet-stream";
                 if (name == null || name.isEmpty()) name = plain ? "分享文字.txt" : "分享附件";
                 name = name.replaceAll("[\\x00-\\x1f/\\\\]", "_");
                 if (name.length() > 180) name = name.substring(0, 180);
@@ -107,14 +106,15 @@ public final class ShareInbox {
                     if (input == null) throw new IOException("无法读取来源附件，请重新分享");
                     byte[] buffer = new byte[65536]; int count;
                     while ((count = input.read(buffer)) != -1) {
-                        total += count;
+                        total += count;batchBytes+=count;
+                        if(batchBytes>512L*1024*1024)throw new IOException("本批附件合计上限 512MB");
                         if (total > MAX_FILE) throw new IOException("单个附件上限 200MB");
                         if (plain && total > 200000) throw new IOException("分享文字超过 200 万字，请缩短后重试");
                         output.write(buffer, 0, count);
                     }
                 }
                 if (total == 0) throw new IOException("分享附件为空，请重新选择");
-                if (archive) {
+                if (archive && WechatArchive.isChat(target)) {
                     if (uris.size() != 1) throw new IOException("请每次分享一个聊天 ZIP，其他附件请单独分享");
                     WechatArchive.Result chat = WechatArchive.unpack(target, dir, files.length());
                     String transcriptText=text.trim().isEmpty()?chat.text:text+"\n\n"+chat.text;
@@ -131,9 +131,9 @@ public final class ShareInbox {
                     text = text.isEmpty() ? value : text + "\n" + value;
                     target.delete();
                     if (text.length() > 2000000) throw new IOException("分享文字超过 200 万字，请缩短后重试");
-                } else files.put(new JSONObject().put("name", name).put("mime", mime).put("size", total));
+                } else {if(archive&&!target.renameTo(new File(dir,files.length()+".bin")))throw new IOException("附件暂存失败");files.put(new JSONObject().put("name", name).put("mime", mime).put("size", total));}
             }
-            if (text.trim().isEmpty() && files.length() == 0 && transcriptSize == 0) throw new IOException("没有可接收的文字、图片或视频");
+            if (text.trim().isEmpty() && files.length() == 0 && transcriptSize == 0) throw new IOException("没有可接收的文字或文件");
             JSONObject metadata = new JSONObject().put("token", dir.getName()).put("text", text)
                 .put("transcriptSize",transcriptSize).put("files", files).put("wechat", wechat).put("created", System.currentTimeMillis());
             try (FileOutputStream output = new FileOutputStream(new File(dir, "ready.tmp"))) {

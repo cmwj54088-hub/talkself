@@ -16,7 +16,7 @@ def touch(cdp,x,y,hold=0):
 def coords(locator):
  b=locator.bounding_box();return (b['x']+min(b['width']/2,65),b['y']+min(b['height']/2,25))
 def menu(page,mid):
- page.locator('[data-message="'+mid+'"] [data-menu]').click();page.locator('#forward-message').click()
+ page.locator('[data-message="'+mid+'"]').dispatch_event('contextmenu',{'clientX':180,'clientY':300});page.locator('#forward-message').click()
 def choose(page,pid):page.locator('.forward-targets [data-forward-project="'+pid+'"]').click()
 def bottom(page):return page.locator('#messages').evaluate('e=>e.scrollHeight-e.scrollTop-e.clientHeight')
 with sync_playwright() as p:
@@ -87,7 +87,7 @@ with sync_playwright() as p:
  assert page.evaluate('getSelection().toString()')==''
  # Close menu if the long touch did not activate its button.
  page.evaluate('document.querySelector(".context-menu")&&window.ziyanGoBack()')
- page.locator('[data-message="note-29"] [data-menu]').click();page.locator('#select-message').click()
+ page.locator('[data-message="note-29"]').dispatch_event('contextmenu',{'clientX':180,'clientY':300});page.locator('#select-message').click()
  expect(page.locator('#selection-text')).to_be_visible();assert page.locator('#selection-text').evaluate('e=>getComputedStyle(e).userSelect')=='text'
  page.locator('#selection-back').click();page.wait_for_timeout(150)
  x,y=coords(page.locator('[data-message="note-29"] .bubble'));touch(cdp,x,y);page.wait_for_timeout(90);touch(cdp,x,y)

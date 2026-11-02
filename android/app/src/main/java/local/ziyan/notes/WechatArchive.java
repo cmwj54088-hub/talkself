@@ -18,7 +18,7 @@ final class WechatArchive {
     static final class Result {
         String text; final List<Part> parts = new ArrayList<>();
     }
-    private static String mime(String name) throws IOException {
+    static String mime(String name) {
         String ext=name.substring(name.lastIndexOf('.')+1).toLowerCase(Locale.ROOT);
         switch(ext) {
             case "jpg": case "jpeg": return "image/jpeg";
@@ -27,8 +27,19 @@ final class WechatArchive {
             case "heic": return "image/heic"; case "heif": return "image/heif";
             case "mp4": return "video/mp4"; case "webm": return "video/webm";
             case "mov": return "video/quicktime"; case "3gp": return "video/3gpp";
-            default: throw new IOException("聊天 ZIP 含暂不支持的附件："+name+"；未导入任何内容");
+            case "pdf": return "application/pdf";
+            case "doc": return "application/msword"; case "docx": return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "ppt": return "application/vnd.ms-powerpoint"; case "pptx": return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            case "xls": return "application/vnd.ms-excel"; case "xlsx": return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case "zip": return "application/zip"; case "txt": return "text/plain"; case "csv": return "text/csv";
+            case "json": return "application/json"; case "html": case "htm": return "text/html";
+            case "mp3": return "audio/mpeg"; case "wav": return "audio/wav";
+            default: return "application/octet-stream";
         }
+    }
+    static boolean isChat(File file) {
+        try(ZipFile zip=new ZipFile(file,StandardCharsets.UTF_8)){return zip.getEntry("Chat history.txt")!=null||zip.getEntry("聊天记录.txt")!=null;}
+        catch(IOException ignored){return false;}
     }
     static Result unpack(File archive,File directory,int startIndex) throws IOException {
         if(startIndex<0||archive.length()>MAX_FILE)throw new IOException("聊天 ZIP 上限 200MB");

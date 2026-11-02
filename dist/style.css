@@ -314,3 +314,15 @@ input,textarea,[contenteditable=true],.selection-view textarea{user-select:text;
 .task-bubble .task-meta small{color:#183c29}.stream-task.done .task-text{color:#204331}.stream-task .check{border-color:#236442;background:transparent}.stream-task .check.checked{background:#225c3c;color:#fff}
 
 .short-viewport .messages{padding-top:8px;padding-bottom:8px}
+
+/* Common reading rhythm: an explicit newline has the same height in lists and editors. */
+.message .bubble,.task-text,.task-edit-area #task-body,.rich-body{font-size:17px;line-height:1.8}
+.rich-content p,.rich-body p{margin:0;min-height:1.8em}.task-card .task-text{font-size:17px}
+.file-attachment{max-width:100%;margin:8px 0}.file-card{display:flex;gap:12px;align-items:center;width:300px;max-width:100%;padding:14px;text-align:left;background:#292929;border:1px solid #444;border-radius:7px;color:#ededed}.file-card>span:nth-child(2){flex:1;min-width:0}.file-card strong{display:block;font-size:15px;overflow-wrap:anywhere;white-space:normal}.file-card small{display:block;color:#aaa;font-size:11px;overflow-wrap:anywhere;margin-top:7px}.file-symbol{font-size:30px;color:#3cb474}.file-attachment>.text-link{padding:5px 0;font-size:12px}.file-preview{padding:12px;margin:8px 0;border:1px solid #555;overflow-wrap:anywhere}
+.chat-record-card{display:flex;flex-direction:column;gap:9px;padding:14px;background:#292929;color:#eee;border:1px solid #555;border-radius:6px;text-align:left;max-width:300px;margin-top:8px;font-size:14px;overflow-wrap:anywhere}.chat-record-card span{color:#aaa;font-size:12px}
+.record-view{position:fixed;top:var(--view-top,0);left:0;right:0;height:var(--view-height,100dvh);z-index:35;background:#111;color:#eee;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}.record-view-content{flex:1;min-height:0;overflow:auto;padding:18px}.record-view-content .message{margin-bottom:20px}.record-view-content .message-body{max-width:calc(100% - 44px)}.record-view-content .bubble{max-width:100%;overflow-wrap:anywhere}.record-view-paging{display:flex;justify-content:space-between;padding:12px;background:#242424}.record-view-paging button{color:#3cb474}.setting-toggle{display:flex;align-items:center;gap:12px}.setting-toggle input{width:20px;height:20px;accent-color:#3cb474}
+.garden{overflow:hidden}.garden span{user-select:none;pointer-events:none}
+
+.record-view{width:100%;max-width:none;max-height:none;margin:0;border:0;padding-left:0;padding-right:0}.record-view:not([open]){display:none}
+
+.record-view-status:empty{display:none}.record-view-status{padding:10px 16px;margin:0;background:#292929;color:#ddd;font-size:13px;flex-shrink:0}

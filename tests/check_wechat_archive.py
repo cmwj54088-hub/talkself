@@ -52,6 +52,7 @@ with fixture_directory(OUT) as temporary:
   return {'name':path.name,'text':text,'files':files,'wechat':True}
  valid=[archive('single',[('Chat history.txt','·第一条')]),archive('merged',[('Chat history.txt','·测试者\n2026/10/31 20:40\n第一条\n\n·测试者\n2026/10/31 20:41\n第二条')]),archive('individual',[('Chat history.txt','·第一条\n\n·第二条')]),archive('image',[('Chat history.txt','·测试者\n2026/10/31 20:40\n[Photo] first.png\n\n<script>bad()</script> & 文本\n\n[Photo] second.png'),('media/first.png',png),('media/second.png',png)]),archive('video',[('Chat history.txt','·测试者\n2026/10/31 20:40\n[Video] movie.mp4'),('media/movie.mp4',b'video-byte-fixture')])]
  valid.append(archive('long',[('Chat history.txt','·合成发送者\n2026/10/31 20:40\n'+'字'*60000+'\n\n·合成发送者\n2026/10/31 20:40\n'+'文'*60000)]))
+ valid.append(archive('documents',[('Chat history.txt','·合成发送者\n2026/11/02 09:00\n[File]  report.pdf\n[File] deck.pptx\n[File] future.unknown'),('files/report.pdf',b'%PDF-synthetic'),('files/deck.pptx',b'PK-synthetic-pptx'),('files/future.unknown',b'opaque-bytes')]))
  fixtures=[run(path) for path in valid]
  assert '2026/10/31' in fixtures[1]['text'] and '2026/10/31' not in fixtures[2]['text']
  assert len(fixtures[3]['files'])==2 and base64.b64decode(fixtures[3]['files'][0]['base64'])==png
@@ -60,7 +61,7 @@ with fixture_directory(OUT) as temporary:
   ('duplicate-name',[('Chat history.txt','text'),('a/x.png',png),('b/x.png',png)]),
   ('missing-text',[('media/x.png',png)]),
   ('missing-image',[('Chat history.txt','[Photo] missing.png')]),
-  ('unsupported',[('Chat history.txt','text'),('a.png',png),('file.pdf',b'%PDF')]),
+
   ('oversize-text',[('Chat history.txt','字'*(8*1024*1024//3+1))]),
   ('invalid-utf8',[('Chat history.txt',b'\xff\xff')]),
   ('entry-limit',[('Chat history.txt','text')]+[(f'media/{i}.png',png) for i in range(256)]),
@@ -69,7 +70,7 @@ with fixture_directory(OUT) as temporary:
  for name,offset,fmt,value in [('oversize-file',24,'<I',200*1024*1024+1),('encrypted',8,'<H',1),('bad-crc',16,'<I',123)]:
   original=archive(name,[('Chat history.txt','text')]);raw=bytearray(original.read_bytes());at=raw.index(b'PK\x01\x02');struct.pack_into(fmt,raw,at+offset,value);original.write_bytes(raw);run(original,False)
  broken=folder/'broken.zip';broken.write_bytes(b'PK\x03\x04broken');run(broken,False)
- print('PASS production JVM ZIP reader: text/image/video; UTF-8, size/count, duplicate/path, missing attachment, unknown file, encryption, corruption; failure cleans partial files')
+ print('PASS production JVM ZIP reader: text/image/video; UTF-8, size/count, duplicate/path, missing attachment, generic files preserved, encryption, corruption; failure cleans partial files')
  if '--include-local-evidence' in sys.argv:
   for path in sorted((ROOT/'evidence').glob('Chat history_*.zip')):
    fixtures.append(run(path));print('PASS real local WeChat export:',path.name)

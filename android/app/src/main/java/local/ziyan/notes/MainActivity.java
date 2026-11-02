@@ -384,6 +384,37 @@ public final class MainActivity extends Activity {
                 } catch (ActivityNotFoundException e) { activeExport = null; complete(token, false, "系统没有可用的文件保存界面"); }
             });
         }
+        @JavascriptInterface public synchronized void finishOpen(String token) {
+            SaveJob job=jobs.get(token);if(job==null||job.ready)return;
+            File root=new File(getCacheDir(),"open-files"),dir=new File(root,token);
+            try {
+                job.stream.close();job.ready=true;
+                if(job.bytes<=0||job.bytes>200L*1024*1024)throw new IOException("打开文件上限 200MB");
+                root.mkdirs();long cached=0;File[] folders=root.listFiles();
+                if(folders!=null)for(File old:folders){
+                    if(System.currentTimeMillis()-old.lastModified()>7L*24*60*60*1000){for(File f:old.listFiles()==null?new File[0]:old.listFiles())f.delete();old.delete();}
+                    else {File payload=new File(old,"payload");cached+=payload.length();}
+                }
+                if(cached+job.bytes>512L*1024*1024)throw new IOException("临时打开文件占用已达 512MB，请稍后再试或另存文件");
+                if(!dir.mkdir()||!job.file.renameTo(new File(dir,"payload")))throw new IOException("无法准备附件");
+                JSONObject meta=new JSONObject().put("name",job.name).put("mime",job.mime);
+                try(FileOutputStream output=new FileOutputStream(new File(dir,"meta.json"))){output.write(meta.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));}
+            } catch(Exception error){File[] partial=dir.listFiles();if(partial!=null)for(File f:partial)f.delete();dir.delete();complete(token,false,error.getMessage()==null?"无法准备附件":error.getMessage());return;}
+            runOnUiThread(()->{
+                try {
+                    Uri uri=new Uri.Builder().scheme("content").authority("local.ziyan.notes.attachments").appendPath(token).appendPath(job.name).build();
+                    Intent view=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,"application/octet-stream".equals(job.mime)?"*/*":job.mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    view.setClipData(ClipData.newRawUri(job.name,uri));
+                    boolean available=false;
+                    for(android.content.pm.ResolveInfo info:getPackageManager().queryIntentActivities(view,android.content.pm.PackageManager.MATCH_DEFAULT_ONLY))
+                        if(info.activityInfo!=null&&!getPackageName().equals(info.activityInfo.packageName)){available=true;break;}
+                    if(!available)throw new ActivityNotFoundException();
+                    Intent chooser=Intent.createChooser(view,"选择应用打开文件").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    chooser.putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS,new android.content.ComponentName[]{new android.content.ComponentName(MainActivity.this,MainActivity.class)});
+                    startActivity(chooser);complete(token,true,"");
+                }catch(ActivityNotFoundException|SecurityException error){for(File f:dir.listFiles()==null?new File[0]:dir.listFiles())f.delete();dir.delete();complete(token,false,"没有可打开此文件的应用，请安装相应应用或另存文件");}
+            });
+        }
         @JavascriptInterface public synchronized void abortSave(String token) {
             SaveJob job = jobs.remove(token);
             if (job == null) return;

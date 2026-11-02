@@ -22,7 +22,7 @@ with sync_playwright() as p:
  page.route('https://ziyan.local/**',resource)
  page.goto('https://ziyan.local/');expect(page.locator('.project')).to_have_count(1)
  page.locator('.project').click();page.locator('#message-input').fill('Native backup test');page.locator('#send-button').click();expect(page.locator('.message')).to_have_count(1)
- page.locator('[data-menu]').click();page.locator('#copy-message').click();expect(page.locator('#dialog')).not_to_be_visible();assert page.evaluate('testClipboard')=='Native backup test'
+ page.locator('.message').dispatch_event('contextmenu',{'clientX':180,'clientY':300});page.locator('#copy-message').click();expect(page.locator('#dialog')).not_to_be_visible();assert page.evaluate('testClipboard')=='Native backup test'
  page.locator('[data-action="task-mode"]').click();page.locator('#message-input').fill('离线提醒测试');page.locator('#send-button').click()
  page.locator('.taskbar-toggle').click();page.locator('.bar-task [data-task-menu]').click();page.locator('#task-reminder').click();page.locator('#reminder-time').fill('07:35');page.locator('#reminder-open').click();expect(page.locator('#dialog')).not_to_be_visible();assert page.evaluate('testAlarms')==[[7,35,'离线提醒测试']]
  page.evaluate('window.ziyanGoBack()');page.locator('.mobile-nav:visible [data-page="settings"]').click();expect(page.locator('.page')).to_contain_text('APK '+version);expect(page.locator('[data-action="persist"]')).to_have_count(0)

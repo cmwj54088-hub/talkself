@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="local.ziyan.notes" android:versionCode="14" android:versionName="0.11.0">
+    package="local.ziyan.notes" android:versionCode="15" android:versionName="0.12.0">
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
@@ -8,7 +8,7 @@
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- Intentionally no INTERNET, camera or shared-storage permissions. -->
-    <queries><intent><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.APP_BROWSER"/></intent></queries>
+    <queries><intent><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.APP_BROWSER"/></intent><intent><action android:name="android.intent.action.VIEW"/><data android:scheme="content" android:mimeType="*/*"/></intent></queries>
     <application android:label="自言" android:icon="@drawable/ic_launcher"
         android:theme="@style/AppTheme" android:hardwareAccelerated="true"
         android:allowBackup="false" android:fullBackupContent="false"
@@ -27,7 +27,7 @@
                 <action android:name="android.intent.action.SEND" />
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="text/plain" />
+                <data android:mimeType="*/*" />
                 <data android:mimeType="application/zip" />
                 <data android:mimeType="application/x-zip-compressed" />
                 <data android:mimeType="image/*" />
@@ -36,13 +36,14 @@
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="content" android:mimeType="image/*" />
+                <data android:scheme="content" android:mimeType="*/*" />
                 <data android:scheme="content" android:mimeType="video/*" />
                 <data android:scheme="content" android:mimeType="text/plain" />
                 <data android:scheme="content" android:mimeType="application/zip" />
                 <data android:scheme="content" android:mimeType="application/x-zip-compressed" />
             </intent-filter>
         </activity>
+        <provider android:name=".AttachmentProvider" android:authorities="local.ziyan.notes.attachments" android:exported="false" android:grantUriPermissions="true" />
         <provider android:name=".CameraProvider" android:authorities="local.ziyan.notes.camera"
             android:exported="false" android:grantUriPermissions="true" />
     </application>

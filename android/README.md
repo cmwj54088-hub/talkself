@@ -1,12 +1,12 @@
-# Android container · 0.11.0
+# Android container · 0.12.0
 
 本机 SDK、JDK、测试依赖路径与 PowerShell 构建命令统一见 [工具链说明](../docs/TOOLCHAIN.md)。
 
-包名 `local.ziyan.notes`，versionCode 14，最低 API 26，目标 API 35。没有 INTERNET、RECORD_AUDIO、相机或共享存储权限。系统自动备份关闭，用户通过完整 JSON 备份迁移。
+包名 `local.ziyan.notes`，versionCode 15，最低 API 26，目标 API 35。没有 INTERNET、RECORD_AUDIO、相机或共享存储权限。系统自动备份关闭，用户通过完整 JSON 备份迁移。
 
 MainActivity 原生读取 APK 内的单文档 HTML，再用稳定 HTTPS 应用来源载入。这个来源不进行 DNS 或网络连接，用于保持本地数据库归属。CSP 阻止外部连接、框架和对象；资源拦截也会拒绝额外地址。
 
-MainActivity 使用 singleTask 接收冷启动和已运行时的 SEND、SEND_MULTIPLE 分享，以及 content URI 的 VIEW 打开入口。声明 text/plain、image/*、video/*、application/zip、application/x-zip-compressed 类型。ShareInbox 在后台线程把临时 URI 流式复制到应用私有 files/share-inbox/，按单附件 200 MB 校验，全部读取成功才发布暂存元数据；失败清理本批次，不创建记录。未确认内容保留到确认或取消，重启可恢复；未完成复制的旧目录在一天后清理。
+MainActivity 使用 singleTask 接收冷启动和已运行时的 SEND、SEND_MULTIPLE 分享，以及 content URI 的 VIEW 打开入口。声明 content URI 的通用文件类型以及文字／图片／视频／ZIP；文档文件按不透明附件保留。ShareInbox 在后台线程把临时 URI 流式复制到应用私有 files/share-inbox/，按单附件 200 MB 校验，全部读取成功才发布暂存元数据；失败清理本批次，不创建记录。未确认内容保留到确认或取消，重启可恢复；未完成复制的旧目录在一天后清理。
 
 前端通过 192 KB 分块桥接读取暂存文件，独立弹窗预览、编辑文字并选择项目。确认时在同一个 IndexedDB 事务内写入文字、全部附件、项目时间和接收标记，成功后才清理暂存文件；接收标记防止保存后异常退出造成重复。附件进入原有 media 存储和版本 3 完整备份，无需保留来源 URI 授权。预览期间不替换项目输入框或编辑器草稿。
 
@@ -20,7 +20,7 @@ WebView 界面负责业务和 IndexedDB；原生容器负责系统栏／键盘�
 
 `ZIYAN_ANDROID_QA=1` 仅生成内部诊断 APK，普通交付构建始终关闭调试。请先读项目根目录的 AGENTS.md、README.md、REQUIREMENTS.md。
 
-WechatArchive 使用 JDK／Android 内置 ZipFile 解析微信导出的明文聊天 ZIP，不引入运行时依赖。先复制授权 URI 到私有暂存，再验证条目路径、重复名称、CRC、UTF-8 文本、正文和媒体引用，限制单包／附件 200 MB、解压合计 512 MB、256 个条目和 8MB UTF-8 正文。输出使用应用生成的数字文件名，不按 ZIP 内路径落盘。未知附件、损坏、加密或缺失内容整批拒绝。每次接收一个 ZIP；拒绝 ZIP 和其他 URI 混合分享。
+WechatArchive 使用 JDK／Android 内置 ZipFile 解析微信导出的明文聊天 ZIP，不引入运行时依赖。先复制授权 URI 到私有暂存，再验证条目路径、重复名称、CRC、UTF-8 文本、正文和媒体引用，限制单包／附件 200 MB、解压合计 512 MB、256 个条目和 8MB UTF-8 正文。输出使用应用生成的数字文件名，不按 ZIP 内路径落盘。未知附件以 application/octet-stream 保留；损坏、加密或缺失引用内容的聊天 ZIP 整批拒绝。每次接收一个 ZIP；拒绝 ZIP 和其他 URI 混合分享。
 
 解析成功后正文暂存在 transcript.txt，pending 元数据只传大小，readText 用 192KB 二进制块传输；前端 TextDecoder 流式处理跨块 UTF-8，逐条解析时分批交还事件循环。前端根据合并／逐条格式保存原消息，姓名／时间独立存入 origin（缺失为 null），图片保留 richtext 内联引用，视频以同条消息的 attachments 保存。单次最多 20000 条，单条 200 万字；按原消息边界分页，不按五万字切段。无法识别的结构需确认原文回退。原消息、附件、项目和接收标记沿用既有 stores 原子事务；数据库版本 2、备份版本 3，新增字段有校验并兼容旧备份。编辑后引用失联整批拒绝。系统编解码能力决定媒体能否播放。诊断 Activity、设置按钮和桥接保持移除。
 
@@ -34,3 +34,12 @@ versionCode 12。TaskReminders 使用 AlarmManager.setExactAndAllowWhileIdle 与
 ## 0.11.0 消息流与编辑
 
 versionCode 14，保持原包名、签名及既有提醒权限。待办消息气泡派生自 tasks，不复制数据；跨项目转发写入独立 tasks 与媒体，默认未完成、不启用提醒。普通消息／待办展开均复用全屏笔记编辑器，图片与共用草稿往返保留。原生复制有 20 万字单次 IPC 限制，超长记录可选部分或导出。浏览器短视口检查不能替代安卓 IME 和真机微信分享／提醒验证。
+
+
+## 0.12.0 文件卡片与嵌套聊天
+
+versionCode 15。WechatArchive 对普通文件映射已知 MIME、未知格式回退，不解析 Office/PDF 或嵌套 ZIP 文件。正文中四空格缩进的 Chat History 卡片解析为 children，JSON 仍为 v3／DB schema 2，所有后代媒体和来源字段受验证与原子事务保护。
+
+AttachmentProvider 非 exported，只提供随机 token 对应的一份 payload。finishOpen 分块暂存并创建只读 content URI，ACTION_VIEW 选择器排除本应用，仅临时读授权，无写权限／共享存储权限。未知 MIME 用外部应用通用选择器；无适用外部应用会返回明确失败。临时打开文件总量 512MB、7 天清理，不删除数据库原件。仅新增 provider 和类型查询／分享过滤，不增加权限。
+
+通用卡片的字节与桥接可在浏览器模拟验证；真正的第三方文档应用、文件权限授予、IME、传感器及厂商系统行为仍需安卓真机验收。

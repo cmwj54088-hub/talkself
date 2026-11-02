@@ -3,7 +3,7 @@
   if (!window.ZiyanAndroid) return;
   const pending = new Map();
   window.ZiyanFiles = {
-    async save(blob, name) {
+    async save(blob, name, open=false) {
       const token = ZiyanAndroid.beginSave(name, blob.type || 'application/octet-stream');
       if (!token) throw new Error('已有导出正在进行，或临时空间不足');
       try {
@@ -16,12 +16,13 @@
         }
         return await new Promise((resolve, reject) => {
           pending.set(token, { resolve, reject });
-          ZiyanAndroid.finishSave(token);
+          if(open)ZiyanAndroid.finishOpen(token);else ZiyanAndroid.finishSave(token);
         });
       } catch (e) {
         pending.delete(token); ZiyanAndroid.abortSave(token); throw e;
       }
     },
+    async open(blob,name){if(!ZiyanAndroid.finishOpen)throw new Error('当前安装版本不支持外部文件打开，请升级 APK');return this.save(blob,name,true);},
     receive(token, success, error) {
       const item = pending.get(token); if (!item) return;
       pending.delete(token);
@@ -46,7 +47,7 @@
       chunks.push(decoder.decode());return chunks.join('');
     },
     async file(token, index, item, cancelled) {
-      if (!/^(image|video)\/[a-zA-Z0-9.+-]+$/.test(item.mime) ||
+      if (!/^[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+$/.test(item.mime) ||
           !Number.isSafeInteger(item.size) || item.size <= 0 || item.size > 200*1024*1024)
         throw new Error('分享附件格式不支持或超过 200MB');
       const chunks=[];

@@ -26,9 +26,9 @@ async function rows(page,store){return page.evaluate(async store=>{const db=awai
   for(let i=0;i<fixtures.length;i++){
    const fixture={...fixtures[i],token:'wechat-'+i,created:i};
    await page.evaluate(f=>{inbox.push(f);ZiyanShares.available();},fixture);
-   await expect(page.locator('.share-preview h3')).toHaveText('接收微信聊天记录');await expect(page.locator('#share-save')).toBeEnabled();
+   await expect(page.locator('.share-preview h3')).toHaveText('接收微信聊天记录');await expect(page.locator('#chat-summary')).toContainText('共');const needs=await page.locator('#chat-fallback').isVisible();if(needs)await page.locator('#chat-fallback-confirm').check();await expect(page.locator('#share-save')).toBeEnabled();
    const parsed=await parseChat(fixture.text);await expect(page.locator('#share-text')).toHaveValue(parsed.messages[0].text);
-   const images=chatFileIndexes(parsed.messages[0].text,fixture.files).map(i=>fixture.files[i]).filter(f=>f.mime.startsWith('image/'));
+   function tree(rows){return rows.flatMap(m=>[m,...tree(m.children||[])]);}const images=[...new Set(tree([parsed.messages[0]]).flatMap(m=>chatFileIndexes(m.text,fixture.files)))].map(i=>fixture.files[i]).filter(f=>f.mime.startsWith('image/'));
    await expect(page.locator('#share-wechat-preview img')).toHaveCount(images.length);
    if(images.length)await expect.poll(()=>page.locator('#share-wechat-preview img').evaluateAll(list=>list.every(e=>e.complete&&e.naturalWidth>0))).toBe(true);
    if(fixture.name==='image.zip'){

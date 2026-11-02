@@ -1,4 +1,4 @@
-# Confirmed behavior · 0.11.0
+# Confirmed behavior · 0.12.0
 
 1. Each project has one persistent composer draft shared by message and task
    modes. Switching modes never clears or swaps the content. Projects have
@@ -84,15 +84,16 @@
     or chat database access.
 
 18. Receive one WeChat plain chat ZIP per share. Combine exports split on explicit
-    sender/timestamp headings, individual exports on explicit leading-dot entry
+    sender/timestamp headings, individual exports on confirmed leading-dot entry
     markers; blank lines alone are never boundaries. Keep equal-sender/equal-time
     entries separate. Display origin.sender/time independently; missing values are
     null and visibly unknown. Preserve raw time strings without guessing timezone.
     origin also records format, batch, order and importedAt. Creation time is import
     sequence, independent of origin time. Inline image references and attached videos
     belong to the same original message, not extra send actions. Preview total count,
-    at most 20 summaries per page, and edit the selected message. Unknown grammar or
-    unreferenced media requires explicit whole-text fallback confirmation. Edited
+    at most 20 summaries per page, and edit the selected message. Ambiguous automatic individual markers require explicit confirmation; combine
+    boundaries require a timestamp header, leaving ordinary body bullets intact.
+    Unknown grammar or unreferenced media requires explicit whole-text fallback confirmation. Edited
     broken references reject the whole batch. Persist records/media/project/share
     marker atomically and prevent replay after interrupted native cleanup.
     Limits: ZIP/file 200MB, unpacked 512MB, 256 entries, transcript 8MB UTF-8,
@@ -135,7 +136,8 @@
     and images without sending. Shared composer draft snapshots retain task dates
     and reminder preferences across note/task modes; bottom sending also retains
     expanded rich content and images. Task mode offers relevant fields without note
-    formatting controls. Existing-task edits retain ID/time/done state. Saving and
+    formatting controls. Rich/image drafts continue editing in the same full editor;
+    the compact textarea cannot flatten styling or move inline images. Existing-task edits retain ID/time/done state. Saving and
     draft clearing are atomic and guarded against duplicate completion.
 24. Task reminders have optional local reminderDate, reminderTime and explicit
     reminderEnabled. Older backups default disabled, without inventing dates.
@@ -185,3 +187,39 @@
     kept as notes when conversion to task cannot preserve those videos.
 33. Android single clipboard copy is bounded at 200000 characters for system IPC;
     larger records remain editable/exportable and can use partial text selection.
+
+34. Generic file attachments preserve filename, MIME, byte size and exact bytes,
+    including DOCX/PDF/PPTX/ZIP and unknown extensions (octet-stream fallback).
+    Cards show a human-readable type and size, with Open/Save actions. No document
+    parsing or in-WebView document execution. Known image/video behavior remains.
+    Ordinary ZIP attachments are opaque; a ZIP with a root chat transcript follows
+    validated chat import. Existing text/plain URI handling remains text import.
+    Android SEND/VIEW accepts content files through granted source URIs. File open
+    streams bytes in 192KB chunks to a random private cache token, then ACTION_VIEW
+    chooser grants read only to the exact content URI. Provider is non-exported,
+    validates token/path/name, rejects write mode, and never exposes other app data.
+    Exclude self from the chooser; no installed external handler is an explicit error
+    with the original record retained. Unknown types use an external wildcard chooser.
+    Open copies expire after seven days; opening cache max 512MB, each file 200MB.
+    No new permissions, network dependency or automatic external opening.
+35. Explicit four-space nested Chat History sender/time blocks are stored as
+    children of the original message, not extra root messages or task records.
+    Each child retains independent ID, origin metadata, rich images and attachments;
+    bounded at eight levels and 20000 total nodes per import. Unknown structures
+    retain raw text. Preview and saved cards open a paged read-only viewer; cancelling
+    preview writes no records. Forwarding remaps all child IDs/media atomically.
+    Media reference collection, search, Markdown depth headings and v3 validation
+    traverse children. JSON restores exact file bytes; old backups without fields
+    still import. Descendant IDs, project association, MIME, size and references are
+    validated before any database replacement. Exported new records require the new
+    app for full restoration; old app versions are not claimed compatible.
+36. Task stream visibility is a durable local Settings preference, default true,
+    affecting derived stream display only. Drawer/global list, task IDs, states and
+    backups remain independent of that filter. Task bubble double-click/touch opens
+    the existing task editor; completion controls only toggle state. Explicit line
+    breaks use the same 17px/1.8 rhythm across task lists/bubbles/editor and note
+    paragraphs, with no extra paragraph margins for ordinary newlines.
+37. Garden motion now changes bounded plant positions and velocities in a clipped
+    box, with damped wall/plant collisions and sway. Stop work outside foreground
+    Tasks, respect reduced motion, cap input and count. Physical sensor behavior
+    remains separate from simulated browser checks.
