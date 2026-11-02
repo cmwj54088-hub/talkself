@@ -18,6 +18,45 @@ For user-authorized new execution chats, explicitly use gpt-6.1-sol with medium
 reasoning (the user's standing preference). Do not repeatedly ask for the same
 model preference or silently substitute another model.
 
+## Coordination and acceptance
+
+The user adopted the applicable coordination rules from their V3.0 product-manager
+prompt on 2026-11-02. Project-specific rules live here; do not require that external
+desktop file or third-party reference repositories for routine development.
+
+- A task is persistent; a chat is its current executor. Keep stable task IDs and
+  one current owner. Follow-ups stay with that owner unless the user requests a
+  new chat or an explicit handoff is recorded. Do not create replacement chats
+  merely because a chat is idle or a tool call failed.
+- Distinguish task states: pending, dispatched/awaiting acceptance, in progress,
+  awaiting an answer, blocked, awaiting coordinator review, awaiting user
+  acceptance, accepted, cancelled. Record evidence date, owner and next action;
+  chat active/idle and delivery/send failures are separate facts.
+- Default flow: scope and dispatch -> implementation/self-check -> saved handoff
+  -> coordinator review -> user acceptance in the main coordination chat ->
+  state writeback. An explicit acceptance of a particular scope/version in the
+  development chat remains valid and must be synchronized, not requested again.
+- Before dispatch save task scope, baseline, owner, acceptance steps and handoff
+  path. Define who receives the report and how. Direct cross-chat messages need
+  the user's corresponding authorization and tool support. Otherwise save the
+  handoff in the task file for the coordinator to read; files do not notify chats
+  by themselves. Do not imply persistent monitoring or add background automation.
+- At delivery report type/status, task IDs, source commit, artifact/version/hash,
+  installed/not installed, actual passed/failed/not-run checks, decisions,
+  limitations and next action. The coordinator reads the handoff and relevant
+  evidence, checks commit/artifact relationships and writes review/sync status
+  before presenting concrete acceptance steps to the user.
+- Re-read target files before writing and preserve others' updates. On recovery
+  inspect existing dispatch, commits, dirty files and receipts before retrying.
+  Separate request parameters from independently verified runtime settings.
+- Reuse sufficient existing technical evidence when only documentation or Git
+  ownership changes; do not rebuild unchanged artifacts just to repeat checks.
+  Keep user acceptance, technical verification, merge, push and installation
+  distinct. Never upgrade a known technical failure to a pass based on approval.
+- Retain external toolchain paths, signing dependencies and actual delivered
+  versions for reproducibility. Existence/hash checks are not verified backups
+  or recovery rehearsals. Cleanup still needs explicit scoped authorization.
+
 Preserve all requirements in REQUIREMENTS.md. There is no light mode, recording,
 AI service, telemetry, remote font, CDN, cloud sync or account integration.
 The Android manifest requests SET_ALARM for the separate system clock plus user-authorized POST_NOTIFICATIONS, SCHEDULE_EXACT_ALARM and RECEIVE_BOOT_COMPLETED for local date reminders.
