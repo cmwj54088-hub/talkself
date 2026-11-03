@@ -75,3 +75,32 @@ Desktop.ini
 *.db
 *.db-wal
 *.db-shm
+
+# Local model weights, caches and native build artifacts (never public source)
+/models/
+/model-cache/
+/.cache/
+/.huggingface/
+/android/.cxx/
+/android/app/.cxx/
+*.gguf
+*.ggml
+*.safetensors
+*.onnx
+*.tflite
+*.pt
+*.pth
+*.bin
+*.so
+*.dll
+*.dylib
+*.a
+*.o
+*.obj
+*.class
+*.dex
+*.aar
+*.aab
+
+# Existing private Markdown export inspection samples
+/tests/md导出检查/
